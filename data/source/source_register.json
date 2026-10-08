@@ -1,0 +1,59 @@
+{
+  "dataset_doi": "10.7910/DVN/TXSZDC",
+  "version": "1.0",
+  "accessed": "2026-10-08",
+  "license_displayed": "CC0 1.0",
+  "authors": [
+    "Yang-Yang Zhou",
+    "Guy Grossman",
+    "Shuning Ge"
+  ],
+  "published_benchmark": "Supplementary Table S16",
+  "author_appendix_url": "https://guygrossman.com/assets/pdf/2023_WD_Inclusive_refugee_hosting_appendix.pdf",
+  "files": [
+    {
+      "file_id": 6937036,
+      "file_url": "https://dataverse.harvard.edu/file.xhtml?fileId=6937036&version=1.0",
+      "path": "data/raw/political_data_merged_Dev_Econ_Paper.csv",
+      "bytes": 78387993,
+      "sha256": "fb22a7a77507e68de45300249c64bf330c0ecb7cec9f0d3fd607f8edb57710e3",
+      "distributed_path": "data/raw/political_data_merged_Dev_Econ_Paper.csv.gz",
+      "note": "Lossless gzip compression; listed checksum is for decompressed original CSV."
+    },
+    {
+      "file_id": 6937019,
+      "file_url": "https://dataverse.harvard.edu/file.xhtml?fileId=6937019&version=1.0",
+      "path": "data/raw/uganda_2002_dissolve4.zip",
+      "bytes": 14806733,
+      "sha256": "ba0b8888d12637d3a445ebd7dad8a386f640ba7b81d9cb19772ce9b35b941aa8"
+    },
+    {
+      "file_id": 6940740,
+      "file_url": "https://dataverse.harvard.edu/file.xhtml?fileId=6940740&version=1.0",
+      "path": "data/source/Refugee_dev_Paper.Rnw",
+      "bytes": 145316,
+      "sha256": "d195fc0431ede5d43cead71c414500adc9c5196bb619f699cc7ed416eadb15fe"
+    },
+    {
+      "file_id": 6937271,
+      "file_url": "https://dataverse.harvard.edu/file.xhtml?fileId=6937271&version=1.0",
+      "path": "data/source/Refugee_dev_SI.Rnw",
+      "bytes": 167390,
+      "sha256": "5f092bed7b0c968962a3633429be3614d1e5e35086f70fc3b865e8dd9df47895"
+    },
+    {
+      "file_id": 6937268,
+      "file_url": "https://dataverse.harvard.edu/file.xhtml?fileId=6937268&version=1.0",
+      "path": "data/source/README.rtf",
+      "bytes": 7333,
+      "sha256": "da66351b391b5a27aa54904928e367eb72732aa313c7c39f2e32423243c766f7"
+    },
+    {
+      "file_id": 6937033,
+      "file_url": "https://dataverse.harvard.edu/file.xhtml?fileId=6937033&version=1.0",
+      "path": "data/source/clean_parish_data_development_v4.R",
+      "bytes": 29621,
+      "sha256": "e5c64f9746d0742ed645caeab12354eb9a9860449925acb056b85d7fd4e31049"
+    }
+  ]
+}

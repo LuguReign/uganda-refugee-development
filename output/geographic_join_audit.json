@@ -1,0 +1,8 @@
+{
+  "boundary_records": 5378,
+  "unique_geographic_ids": 5378,
+  "panel_parishes": 5167,
+  "all_panel_ids_found": true,
+  "crs": "WGS84 geographic coordinates",
+  "map_gray": "Outside 150km study sample or missing controls"
+}

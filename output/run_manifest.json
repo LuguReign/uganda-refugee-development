@@ -1,0 +1,10 @@
+{
+  "dataset_doi": "10.7910/DVN/TXSZDC",
+  "dataset_version": "1.0",
+  "python": "3.12.14",
+  "pandas": "2.2.3",
+  "numpy": "2.3.5",
+  "data_sha256": "fb22a7a77507e68de45300249c64bf330c0ecb7cec9f0d3fd607f8edb57710e3",
+  "inference": "Parish-cluster CR1; nested-FE small-sample correction; t(G-1) intervals",
+  "scope": "Selected public-goods replication; no survey/health-utilization replication"
+}

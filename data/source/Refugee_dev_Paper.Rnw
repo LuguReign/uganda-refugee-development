@@ -1,0 +1,2259 @@
+\documentclass[12pt]{article}
+
+\newcounter{lastnote}
+\newenvironment{scilastnote}{%
+\setcounter{lastnote}{\value{enumiv}}%
+\addtocounter{lastnote}{+1}%
+\begin{list}%
+{\arabic{lastnote}.}
+{\setlength{\leftmargin}{.22in}}
+{\setlength{\labelsep}{.5em}}}
+{\end{list}}
+
+% Other necessary packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{array}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+\usepackage{listings}
+\usepackage[margin=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{natbib}
+\usepackage{proof}
+\usepackage{multirow}
+\usepackage{hhline}
+\usepackage{wrapfig}
+\usepackage [english]{babel}
+\usepackage{grffile}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage[tikz]{bclogo}
+\usetikzlibrary{chains}
+\usetikzlibrary{positioning}
+\usetikzlibrary{arrows}
+\usepackage{lscape}
+\usepackage [autostyle, english = american]{csquotes}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{indentfirst}
+\usepackage{hyperref}
+\usepackage{pdfpages}
+\usepackage{booktabs}
+\newcommand{\tabitem}{~~\llap{\textbullet}~~}
+\bibliographystyle{apsr}
+\bibpunct{(}{)}{;}{a}{,}{,}
+\DeclareGraphicsExtensions{.pdf,.png,.jpg}
+\setlength{\tabcolsep}{.18cm}
+\usepackage{fancyvrb}
+\usepackage{sectsty}
+\sectionfont{\fontsize{14}{14}\selectfont}
+\subsectionfont{\fontsize{12}{12}\selectfont}
+\usepackage{numprint}
+\npthousandsep{,}
+
+\usepackage{listings}
+\lstset{
+basicstyle=\small\ttfamily,
+columns=flexible,
+breaklines=true
+}
+
+% COLOR CODING OUR COMMENTS
+\newenvironment{bluetext}{\color{blue}}{\ignorespacesafterend} 
+
+% ==Cross Referencing Different Docs
+\usepackage{xr}
+\externaldocument{Refugee_dev_SI}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{{\large \bf Inclusive Refugee-Hosting Can Improve Local Development\\
+and Prevent Public Backlash
+}\footnote{This paper was commissioned by the World Bank Social Sustainability and Inclusion Global Practice as part of the activity ``Preventing Social Conflict and Promoting Social Cohesion in Forced Displacement Contexts.'' The activity is task managed by Audrey Sacks and Susan Wong with assistance from Stephen Winkler. This work is part of the program “Building the Evidence on Protracted Forced Displacement: A Multi-Stakeholder Partnership''. The program is funded by UK aid from the United Kingdom's Foreign, Commonwealth and Development Office (FCDO), it is managed by the World Bank Group (WBG) and was established in partnership with the United Nations High Commissioner for Refugees (UNHCR). The scope of the program is to expand the global knowledge on forced displacement by funding quality research and disseminating results for the use of practitioners and policy makers. This work does not necessarily reflect the views of FCDO, the WBG or UNHCR.}\footnote{We are incredibly grateful to the UNHCR Uganda and World Bank Uganda staff for data and insights on refugee-hosting in Uganda; Herbert Musoke for help with obtaining education data; Paul Heysch de La Borde, Rachel Brow, Sachit Gali, Ia Mantecon Garcia, Isabella Preite, and Bayley Tuch for excellent research assistance. We thank Christopher Blair, Benjamin Fifield, Vasiliki Fouka, Margarita Puerto Gomez, John Ilukor, Apoorva Lal, Benjamin Laughlin, Carl Müller-Crepon, Melina R. Platas, Hannah Postel, Benjamin Reese, Audrey Sacks, Jeremy Springman, Stephen Joseph Winkler, Alexander Yarkin, Stephanie Zonszein, and participants from the 2021 PDRI Barriers and Bridges to Immigrants' Integration Conference, and the Social and Economic Benefits of Refugee Arrivals Panel for helpful comments. Zhou acknowledges funding from SSHRC and CIFAR.}\footnote{Replication files, including R code and data, are available at the Harvard Dataverse: \url{https://doi.org/10.7910/DVN/TXSZDC}}
+}
+
+
+\author{
+Yang-Yang Zhou\thanks{Assistant Professor, Department of Political Science, University of British Columbia, Harvard Academy Scholar, and CIFAR Azrieli Global Scholar, \href{mailto:yangyang.zhou@ubc.ca}{yangyang.zhou@ubc.ca}, \href{https://www.yangyangzhou.com/}{www.yangyangzhou.com}}
+\hspace{2cm} Guy Grossman\thanks{Professor, Department of Political Science, University of Pennsylvania, \href{ggros@upenn.edu}{ggros@upenn.edu}, \href{https://web.sas.upenn.edu/ggros/}{www.web.sas.upenn.edu/ggros}}
+\hspace{2cm} Shuning Ge\thanks{Ph.D. Student, Department of Political Science, Massachusetts Institute of Technology, \href{shuningg@mit.edu}{shuningg@mit.edu}, \href{https://polisci.mit.edu/people/shuning-ge}{www.polisci.mit.edu/people/shuning-ge}}
+}
+
+\date{\today}
+%%%%%%%%%%%%%%%%% END OF PREAMBLE %%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+<<eval=TRUE,echo=FALSE, results='hide', message=FALSE>>= 
+
+library(knitr)
+
+opts_chunk$set(cache = TRUE, 
+               cache.path = 'cache_dev_paper/',
+               fig.path = 'figures_dev_paper/', 
+               tidy = TRUE, 
+               echo = FALSE, 
+               warning = FALSE, 
+               message = FALSE, 
+               fig.pos = 't',
+               dev = 'pdf', 
+               dpi=200)
+
+options(width = 110, digits = 2, scipen=10000)
+
+@
+
+\maketitle
+\vspace{-.8cm}
+
+\begin{abstract} 
+\begin{singlespace} 
+\noindent 
+Large arrivals of refugees raise concerns about potential tensions with host communities, particularly if refugees are viewed as an out-group competing for limited material resources and crowding out public services. To address these concerns, calls have increased to allocate humanitarian aid in ways that also benefit host communities. This study tests whether the increased presence of refugees, when coupled with humanitarian aid, improves public service delivery for host communities and dampens potential social conflict. We study this question in Uganda, one of the largest and most inclusive refugee-hosting countries. The data combines geospatial information on refugee settlements with original longitudinal data on primary and secondary schools, road density, health clinics, and health utilization. We report two key findings. First, even after the 2014 arrival of over 1 million South Sudanese refugees, host communities with greater refugee presence experienced substantial improvements in local development. Second, using public opinion data, we find no evidence that refugee presence has been associated with more negative (or positive) attitudes towards migrants or migration policy.\\
+\begin{center}
+\textbf{Highlights}
+\end{center}
+\begin{enumerate}
+\item We study the effects of liberal refugee-hosting policies and hosting large numbers of refugees on public goods provision and attitudes towards migration in Uganda from 2001 to 2020.
+\item Uganda's inclusive refugee hosting policies allow refugees to self-settle and have access to local public goods, while also ensuring that host communities benefit from refugee-related aid.
+\item We combine longitudinal geospatial data on refugee settlements, primary and secondary education, healthcare, roads, citizen attitudes, and conflict.
+\item We find that host community parishes that are closer to larger refugee settlements experience substantial positive spillovers, such as improved public school access, greater access to health clinics, more health utilization, and more road density.
+\item While we might expect liberal hosting policies and large numbers of refugees to lead to public backlash, especially among poorer citizens, we find no backlash.\\
+\end{enumerate}
+\noindent\textbf{Keywords}: refugees, forced migration, public goods provision, development, Uganda, GIS\\
+\textbf{JEL Codes}: D74, F22, H51, H52, O15\\
+\end{singlespace}
+\end{abstract}
+
+<<eval=TRUE, echo = FALSE, tidy=TRUE, warning=FALSE, error=FALSE, message=FALSE>>=
+
+setwd("Paper_Inputs")
+
+library(haven)
+library(tidyverse)
+library(estimatr)
+library(texreg)
+library(mgcv)
+library(doMC)
+library(rgdal)
+library(equivalence)
+library(CBPS)
+library(kableExtra)
+library(lfe)
+library(sf)
+library(patchwork)
+library(binsreg)
+library(doMC)
+library(ggthemes)
+library(broom)
+library(DescTools)
+library(tidytext)
+library(ggridges)
+library(survey)
+library(sensemakr)
+library(formula.tools)
+library(xtable)
+
+'%notin%' <- Negate('%in%')
+
+## Load data and rescale treatments
+df_pol <- read_csv("political_data_merged_Dev_Econ_Paper.csv") %>%
+  mutate(
+    nearest_exposure_plus_20 = case_when(
+      min_distance < 20~asinh(sum_exposure_20km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_50 = case_when(
+      min_distance < 50~asinh(sum_exposure_50km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_100 = case_when(
+      min_distance < 100~asinh(sum_exposure_100km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure = asinh(nearest_exposure),
+    region_year = paste(region, year),
+    year_numeric = as.numeric(year)
+  ) %>%
+  mutate(across(starts_with("nearest_exposure"), ~scale(.x))) %>%
+  mutate(year = as.character(year),
+         parish_id = as.character(parish_id))
+
+df_pol_full <- df_pol
+
+## specify control variables
+## FOR LATER - night lights(?), schools, health
+control_list <- c(
+  "population_census2002", "average_age_census2002", 
+  "proportion_male_census2002",
+  "literacy_rate_census2002",
+  "unemployment_rate_census2002", 
+  "agriculture_share_census2002", "coethnic_share_census2002",
+  "wealth_index_census2002",
+  "any_violent_event_census2002",
+  "distance_to_nearest_oil_well_in_km",
+  "borderdist", "roaddist", "capitoldist"
+)
+  
+years <- c("(year == '2006')", "(year == '2011')", "(year == '2016')", "(year == '2020')")
+ctr_grid <- expand.grid(control = control_list, year = years)
+ctr_grid$full_var <- paste0("I(", ctr_grid$control, "*", ctr_grid$year, ")")
+#controls <- paste0(ctr_grid$full_var, collapse = "+")
+
+controls <- paste0(ctr_grid$full_var[grepl("2006", ctr_grid$year) | grepl("2011", ctr_grid$year) | grepl("2016", ctr_grid$year) | grepl("2020", ctr_grid$year)], collapse = "+")
+controls_school <- paste0(ctr_grid$full_var[grepl("2006", ctr_grid$year) | grepl("2011", ctr_grid$year) | grepl("2016", ctr_grid$year) | grepl("2020", ctr_grid$year)], collapse = "+")
+controls_health <- paste0(ctr_grid$full_var[grepl("2006", ctr_grid$year) | grepl("2011", ctr_grid$year) | grepl("2016", ctr_grid$year)], collapse = "+")
+controls_road <- paste0(ctr_grid$full_var[grepl("2016", ctr_grid$year) | grepl("2020", ctr_grid$year)], collapse = "+")
+controls_wealth <- paste0(ctr_grid$full_var[grepl("2011", ctr_grid$year)], collapse = "+")
+
+## Subset df_pol to completes with covariates
+df_pol <- df_pol %>%
+  drop_na(min_distance, population_census2002, average_age_census2002, 
+          proportion_male_census2002, 
+          literacy_rate_census2002, unemployment_rate_census2002,
+          agriculture_share_census2002, wealth_index_census2002,
+          coethnic_share_census2002, any_violent_event_census2002,
+          distance_to_nearest_oil_well_in_km,
+          borderdist, roaddist, capitoldist)
+
+## For displaying coefficients
+cmap <- list(
+  'exposure' = "Baseline Presence", 
+  'I((year == "2006") * exposure)' = "Presence x 2006", 
+  'I((year == "2011") * exposure)' = "Presence x 2011", 
+  'I((year == "2016") * exposure)' = "Presence x 2016",
+  'I((year == "2020") * exposure)' = "Presence x 2020"
+)
+
+## Bin exposure measures
+df_pol <- df_pol %>%
+  mutate(
+    ## Binned exposure by quintiles
+    nearest_exposure_quin = cut(
+      nearest_exposure, 
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)), 
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_20_quin = cut(
+      nearest_exposure_plus_20, 
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)),
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_50_quin = cut(
+      nearest_exposure_plus_50,
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)),
+      include.lowest = TRUE
+    ),
+    ## Binary binned exposure
+    nearest_exposure_binary = cut(
+      nearest_exposure, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)), 
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_20_binary = cut(
+      nearest_exposure_plus_20, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)),
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_50_binary = cut(
+      nearest_exposure_plus_50, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)),
+      include.lowest = TRUE
+    )
+  )
+
+## ----------------
+## Load aid dataset
+## ----------------
+df_aid <- read_csv("aid_data_merged.csv") %>%
+  mutate(
+    nearest_exposure_plus_20 = case_when(
+      min_distance < 20~asinh(sum_exposure_20km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_50 = case_when(
+      min_distance < 50~asinh(sum_exposure_50km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_100 = case_when(
+      min_distance < 100~asinh(sum_exposure_100km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure = asinh(nearest_exposure)
+  ) %>%
+  mutate(across(starts_with("nearest_exposure"), ~scale(.x))) %>%
+  mutate(subcounty_id = as.character(subcounty_id))
+
+## specify control variables
+## FOR LATER - night lights(?), schools, health
+control_list_aid <- c(
+  "population", "average_age_census", 
+  "proportion_male_census",
+  "literacy_rate",
+  "unemployment_rate", "wealth_index",
+  "agriculture_share", "coethnic_share_census2002",
+  "violent_events", "fatalities", 
+  "distance_to_nearest_oil_well_in_km",
+  "borderdist", "roaddist", "capitoldist"
+)
+ 
+controls_aid <- paste0(control_list_aid, collapse = "+")
+
+## Subset df_pol to completes with covariates
+df_aid <- df_aid %>%
+  drop_na(min_distance, population, average_age_census, 
+          proportion_male_census, 
+          literacy_rate, unemployment_rate, wealth_index,
+          agriculture_share,
+          coethnic_share_census2002, violent_events, fatalities,
+          distance_to_nearest_oil_well_in_km,
+          borderdist, roaddist, capitoldist)
+
+## For displaying coefficients
+cmap_aid <- list(
+  'exposure' = "Presence"
+)
+
+## Bin exposure measures
+df_aid <- df_aid %>%
+  mutate(
+    ## Binned exposure by quintiles
+    nearest_exposure_quin = cut(
+      nearest_exposure, 
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)), 
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_20_quin = cut(
+      nearest_exposure_plus_20, 
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)),
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_50_quin = cut(
+      nearest_exposure_plus_50,
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)),
+      include.lowest = TRUE
+    ),
+    ## Binary binned exposure
+    nearest_exposure_binary = cut(
+      nearest_exposure, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)), 
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_20_binary = cut(
+      nearest_exposure_plus_20, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)),
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_50_binary = cut(
+      nearest_exposure_plus_50, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)),
+      include.lowest = TRUE
+    )
+  )
+
+## ---------------
+## Load ab dataset
+## ---------------
+# df_ab <- read_csv(
+#   "ab_data_merged.csv",
+#   col_types = c(.default = "?", migrants_attitude_standardized = "d",
+#                 migrants_movement_standardized = "d",
+#                 border_freedom_standardized = "d",
+#                 feel_unsafe_standardized = "d",
+#                 feared_crime_standardized = "d",
+#                 born_non_ugandan_standardized = "d",
+#                 foreigner_residents_standardized =)
+# ) %>%
+df_ab <- read.csv("ab_data_merged.csv") %>%
+  mutate(
+    ## Turn into dummies
+    christian = case_when(religion2 == "christian"~1, !is.na(religion2)~0,
+                          TRUE~NA_real_),
+    muslim = case_when(religion2 == "muslim"~1, !is.na(religion2)~0,
+                       TRUE~NA_real_),
+    other_relig = case_when(religion2 == "other"~1, !is.na(religion2)~0,
+                            TRUE~NA_real_),
+    ## Rescale some outcomes
+    feel_unsafe_standardized = feel_unsafe_standardized * -1,
+    feared_crime_standardized = feared_crime_standardized * -1,
+    ## Exposure
+    nearest_exposure_plus_20 = case_when(
+      min_distance < 20~asinh(sum_exposure_20km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_50 = case_when(
+      min_distance < 50~asinh(sum_exposure_50km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_100 = case_when(
+      min_distance < 100~asinh(sum_exposure_100km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure = asinh(nearest_exposure)
+  ) %>%
+  mutate(across(starts_with("nearest_exposure"), ~scale(.x))) 
+
+## specify control variables
+## ethnicity, education, religion, language need to be fixed
+control_list_ab <- c(
+  "coethnic_pres", 
+  "education2", "christian",
+  "gender", "age", "urbrur", 
+  "borderdist", "roaddist", 
+  "capitoldist"
+)
+
+years <- c("(year == '2006')", "(year == '2011')", "(year == '2016')", "(year == '2020')") 
+ctr_grid_ab <- expand.grid(control = control_list_ab, year = years)
+ctr_grid_ab$full_var <- paste0("I(", ctr_grid_ab$control, "*", ctr_grid_ab$year, ")")
+
+controls_ab_full <- paste0(ctr_grid_ab$full_var, collapse = "+")
+controls_ab_cs <- paste0(control_list_ab, collapse = "+")
+controls_ab_migattitude <- paste0(ctr_grid_ab$full_var[grepl("2016", ctr_grid_ab$year) | grepl("2020", ctr_grid_ab$year)], collapse = "+")
+controls_ab_migmovement <- paste0(ctr_grid_ab$full_var[grepl("2020", ctr_grid_ab$year)], collapse = "+")
+controls_ab_road <- paste0(ctr_grid_ab$full_var[grepl("201[1|6]", ctr_grid_ab$year) | grepl("2020", ctr_grid_ab$year)], collapse = "+")
+
+## Subset df_pol to completes with covariates
+df_ab <- df_ab %>%
+  drop_na(min_distance, coethnic_pres, education2, 
+          christian, muslim, other_relig,
+          urbrur, gender, age, borderdist, roaddist, capitoldist)
+
+## Add in instrument on parish level
+df_ab <- df_ab %>%
+  mutate(P_02_ID = as.character(P_02_ID)) %>%
+  left_join(df_pol %>%
+              dplyr::select(year, parish_id, nearest_exposure_z_ln) %>%
+              mutate(year = as.numeric(year)),
+            by = c("year" = "year", "P_02_ID" = "parish_id"))
+
+## For displaying coefficients
+cmap_ab <- list(
+  'exposure' = "Presence",
+  'I((year == "2006") * exposure)' = "Presence x 2006", 
+  'I((year == "2011") * exposure)' = "Presence x 2011", 
+  'I((year == "2016") * exposure)' = "Presence x 2016", 
+  'I((year == "2020") * exposure)' = "Presence x 2020"
+)
+
+## -----------------------------------------------------
+## Load cross-national AB dataset for descriptive figure
+## -----------------------------------------------------
+ab_cn <- read_csv("ab7_final_34ctry.csv")
+
+## ------------------------
+## Load utilization dataset
+## ------------------------
+df_util <- read.csv("utilization_final.csv")
+
+## --------------------------------
+## Define function to run sensemakr
+## --------------------------------
+sensemakr_felm <- function(mod, varname, benchmark_var){
+  # Extract info
+  est <- tidy(mod) %>% filter(term == varname) %>% pull(estimate)
+  se <- tidy(mod) %>% filter(term == varname) %>% pull(std.error)
+  df <- mod$df
+  # Run sensitivity analysis
+  run_sm <- sensemakr(estimate = est, se = se, dof = df,
+                      treatment = varname)
+  sens_stats <- run_sm$sensitivity_stats
+  # Run informal benchmarking
+  t.dydj <- tidy(mod) %>% filter(term == benchmark_var) %>% pull(statistic)
+  t.dxdj <- tidy(mod$dx.sens) %>% filter(term == benchmark_var) %>% pull(statistic)
+  df.dx <- mod$dx.sens$df
+  r2yxj.dx <- partial_r2(t_statistic = t.dydj, dof = df)
+  r2dxj.x <- partial_r2(t_statistic = t.dxdj, dof = df.dx)
+  bounds <- ovb_partial_r2_bound(r2dxj.x = r2dxj.x, r2yxj.dx = r2yxj.dx,
+                                 kd = c(1,5,10),
+                                 ky = c(1,5,10))
+
+  bound_values <- adjusted_estimate(estimate = est,
+                                    se = se,
+                                    dof = df,
+                                    r2dz.x = bounds$r2dz.x,
+                                    r2yz.dx = bounds$r2yz.dx)
+  
+  sens_stats <- sens_stats %>%
+    mutate(adj_est_1x = bound_values[1],
+           adj_est_5x = bound_values[2],
+           adj_est_10x = bound_values[3])
+  
+  return(sens_stats)
+}
+
+## -----------------------------------------
+## Load UNHCR population data and shapefiles
+##------------------------------------------
+allrefpop <- read.csv("unhcr_popstats_export_time_series_all_data2021.csv", header = TRUE) #refugee pop year global
+
+### Load shapefiles
+refsites <- st_read("ugakaimug/settlement_boundaries.shp", quiet = TRUE)
+
+refsites_kitgum_okollo <- st_read("Kitgum and Okollo/Boundaries_Kitgum_Okollo.shp", quiet = TRUE)
+
+refsites_kitgum_okollo <- st_transform(refsites_kitgum_okollo, st_crs(refsites))
+
+country <- st_read("Uganda_countryboundaries_adm0/uga_admbnda_adm0_UBOS_v2.shp", quiet = TRUE)
+
+parish <- st_read("Uganda_Parish_Boundaries_2002_dissolved_final/uganda_2002_dissolve4.shp", quiet = TRUE) %>%
+  mutate(P_02_ID = as.character(P_02_ID))
+
+## -----------------------------------------------------
+## Load newspapers and aid levels data
+## -----------------------------------------------------
+newspaper <- read_csv("allnewsp_nov4.csv")
+aidtotals <- read_csv("refugee_aid_levels.csv")
+
+@
+
+\newpage
+\setstretch{1.5}
+
+\section{Introduction}
+\label{sec:intro}
+
+An unprecedented---and growing---number of people have been displaced from their homes, in particular by conflict or climate insecurity. Roughly one-third (26 million) of the world's 80 million forcibly displaced persons are refugees; 8 million are asylum seekers or Venezuelans displaced abroad, and 46 million are internally displaced persons (IDPs)~\citep{UNHCR2020}.\footnote{We use \textit{refugee} to refer to ``someone who has been forced to flee his or her country because of persecution, war or violence.'' An \textit{internally displaced person} is ``someone who has been forced to flee their home but never cross an international border.'' And a \textit{migrant} is ``someone who leaves their country purely for economic reasons unrelated to the refugee definition, or to seek material improvements in their livelihood.'' We recognize that there is ongoing debate over these terms, particularly with the refugee/migrant binary, because it is often unclear where the line between ``forced'' and ``voluntary'' migrants lies, and the term ``forced migrant'' removes agency from the people making well-informed choices to migrate \citep{crawley2018refugees,mourad2020,holland2020explaining,hamlin2021crossing}.} Past work suggests that the arrival and settlement of large numbers of displaced people can generate a strong backlash against migrants and migration policies in host communities~\citep{alesina2020political}.\footnote{We use the terms \textit{host (country) citizens} and \textit{host communities} instead of \textit{native-born citizens}, which is a common term in the immigration literature, because in countries with \textit{jus sanguinis} citizenship such as Uganda (with some exceptions for certain ethnic groups), not all those who are born in the state are citizens. For example, children of refugees are excluded from acquiring citizenship based on birth in Uganda.} However, this research has focused almost exclusively on a small number of high-income countries, and there are good theoretical reasons to assume this finding does not necessarily generalize to lower-income countries, which host the majority of displaced persons.\footnote{As of 2019, developing countries hosted 85 percent of the world's 79.5 million displaced people; 28 percent of global refugee flows receive asylum in least-developed countries.} Another strand of research explores the effects of refugees' presence on economic outcomes (e.g.,  \citet{verme2021impact}; \citet{maystadt2019impacts}). Yet, this literature has not yet explored the possible downstream effects of refugee presence on host--refugee relations. We use the case of Uganda to explore how the presence of large numbers of proximate refugees affects host communities' welfare with a specific focus on the quality of public services. We then test whether those economic consequences can, in turn, shape mass attitudes toward migrants and migration policies in an important low-income setting.
+
+The presence of migrants has had (generally) negative effects on host citizens' attitudes and behavior in high- and upper-middle-income countries (HMIC). Migrants' presence has been associated with increased support for restrictive asylum policies~\citep{hangartner2019does} and extreme right parties~\citep{dinas2019waking}, at the expense of mainstream incumbent parties~\citep{bedasso2020south, altindaug2020refugees}. Partly in response to such shifts in public opinion, policy makers in rich democracies have introduced restrictions on migration~\citep{hatton2020asylum, peters2017trading}. Incumbents often point to such public attitudes and (electoral) backlash to justify their refusal to admit more refugees during crises. Moreover, migrant groups in HMICs are too often the targets of hate crimes~\citep{dancygier2020hate} and other forms of violence~\citep{Albarosa2021}, especially in times of crisis~\citep{Dipoppa2021}. This is notable given the evidence that  successful refugee integration has positive spillover effects for society~\citep{hainmueller2015naturalization}, yet hateful behavior has adverse consequences for migrant integration~\citep{dancygier2020hate}. In sum, whether an increase in refugees' presence causes a mass backlash (and/or a violent response) is a timely question that has important implications for both theory and policy.
+
+It is \textit{ex ante} unclear whether the presence of refugees in low-income countries will result in backlashes similar to those found in HMICs. On the one hand, at least four concerns in HMICs are less relevant in low-income countries. First, given that most refugees in the Global South relocate in a contiguous neighboring country~\citep{UNHCR2020}, cultural concerns are arguably less salient, as refugees and host communities are more likely to share ethnic, racial, religious, and cultural ties~\citep{dawa2020hidden}.\footnote{\citet{alesina2020political} discusses the primacy of cultural concerns in mass public responses to migrants' presence in high-income countries.} Second, low-income countries generally do not maintain large welfare systems, so there are fewer worries that migrants will strain host countries' social benefits~\citep{facchini2009does, kros2019explaining}. Third, in most developing countries, political parties do not compete based on policy differences; thus there is no clear party to mobilize votes by attacking refugees and liberal refugee policies. Fourth, refugees tend to settle in under-serviced border areas. Thus, importantly, the influx of humanitarian and development aid that often accompanies refugee settlement into these areas may improve the level and quality of local public services for host communities. Some evidence suggests that humanitarian aid that targets displacement camps and settlements can have positive externalities on host communities~\citep{taylor2016economic, bilgili2019education}.
+
+On the other hand, an influx of a large number of refugees can have negative externalities on host communities in low-income countries in the form of competition on informal low-skilled jobs~\citep{ceritoglu2017impact, aksu2018impact}, higher prices for food~\citep{rozo2021refugee} and housing~\citep{elmallakh2021syrian}, disease spread~\citep{kalipeni1998refugee}, and pressure on the environment in the form of deforestation, and land degradation~\citep{black2018refugees}. Humanitarian aid may also be siphoned away. The severity of such effects---and the extent to which they influence public attitudes toward refugees and migration policy---may depend on how close a community is to refugee settlements. In sum, whether proximity to refugees has different effects on host communities' attitudes and behaviors in low-income contexts is an open question, which our study seeks to begin addressing.   
+
+Using the case of Uganda, we hypothesize that in low-income countries, communities with greater refugee presence will not experience a backlash against migrants and refugee policies as long as these policies (especially those related to resource allocation) ensure that said communities do not carry a disproportionate burden of hosting refugees but rather benefit from aid. We examine distributive efforts that are designed to ameliorate possible {\it congestion effects}. 
+
+Uganda is an important setting for exploring how refugee presence might affect host communities. Home to 1.4 million refugees (the most in Africa), it is the fourth-largest refugee-hosting country in the world and the seventh largest in the world on a per capita basis ~\citep{UNHCR2020}. Uganda has adopted relatively generous hosting policies such as maintaining an ``open door'' for displaced persons; allowing refugees to freely move and participate in economic activities; granting plots of land for permanent shelters and farming; and, with the help of humanitarian aid agencies, providing access to health care and education services~\citep{ronald2020assessment}. Although Uganda's history of hosting refugees dates back to before its independence, the recent mass arrival began in 2014 due to the South Sudanese Civil War. Alongside this shock in the number of refugees, international humanitarian aid to refugee-hosting areas has increased from under 100 million USD in 2015 to over 500 million USD in 2019. Given the sheer scale of the refugee inflow coupled with humanitarian aid, our finding that Uganda has \textit{not} experienced a backlash against refugees among those most directly affected by the country's asylum and refugee policies offers important lessons.   
+
+To explore the effects of refugees' presence in Uganda, we combine publicly available geocoded Afrobarometer survey data with newly constructed fine-grained georeferenced panel data on service delivery in three domains: access to (primary and secondary) education, health care access and health utilization, and road density. We focus on service delivery inputs rather than outcomes since resource allocation for service provision can directly affect access (and quality), but linking access to outcomes (such as infant mortality) is more complex, materializes with a long lag, and depends on many factors that are outside policy makers' control. We use ACLED data to explore possible conflict dynamics.  
+
+We report two sets of findings. First, we find no evidence that a larger refugee presence increases support for restrictive migration policies (though in some years it is associated with a somewhat heightened sense of personal insecurity). Second, using a difference-in-differences (DiD) research design, we find robust evidence that access to education, health care, and  roads significantly improved for those living near refugee settlements, and that these residents recognized these improvements. We conclude that even if living near a large number of refugees fleeing conflict can make individuals feel less safe (and may be associated with other negative consequences not captured by our study), resource allocation policies that benefit nearby communities can reduce potential hostile response against refugees and improve social cohesion between host communities and refugees.
+
+Our paper makes several contributions to the existing scholarship on the impact of refugees' presence on local communities. First, we add to the literature on social cohesion by demonstrating that, in contrast to prior findings in studies of Global North contexts, the presence of large numbers of refugees does not necessarily generally lead to a backlash within host communities; their reactions are highly dependent on the context -- the hosting policies, levels of humanitarian aid, and how said aid is distributed. Second, we advance the emerging literature that examines the local economic consequences of hosting refugees, which has generally found a mix of negative and positive effects. We highlight the importance of refugee policies---such as Uganda's integrative approach to social services---that seek to decrease the burden of hosting refugees on relatively marginalized populations that live near refugee settlements. Third, our project builds upon research that conceptualizes and operationalizes migrant exposure as geographic proximity. With our data, we are not only able to operationalize exposure as geographic proximity, but we are also able to incorporate the sizes of nearby refugee populations and multiple refugee settlements for a more comprehensive measure of exposure. 
+
+
+\section{Theoretical Motivation}
+\label{sec:motivation}
+
+Forced displacement is an increasing global challenge. The number of people affected by displacement events more than doubled from 34 million in 1997 to 82 million in 2020~\citep{UNHCR2020}: about 1 percent of the world's current population (1 in 95 people) has been forcibly displaced. Over a third of these people end up as refugees in a foreign country. Understanding the conditions under which host countries are successful (or not) at integrating those who feel compelled to flee their homes is a humanitarian and economic priority that has important theoretical and policy implications. 
+
+Our study builds on three relatively separate strands of research on how the presence of migrants and refugees affects host communities. The first uses public opinion data and election returns (and in some cases, data on hate crimes) to explore how migrants' presence affects attitudes and behaviors toward migrants and migration policies. Since little public opinion and granular election data is available for developing countries, and given that policy makers in democracies are generally more attuned to their constituents' preferences, such studies have focused almost exclusively on high- and upper-middle-income countries.  
+
+With few exceptions~\citep[e.g.,][]{vertier2019dismantling}, these studies have found that migrants' presence---usually measured as the share of migrants (or refugees) in an area---substantially increases support for anti-immigration policy positions in Germany~\citep{schaub2021strangers, otto2014immigration}, Italy~\citep{barone2016mr}, Switzerland~\citep{brunner2018immigration}, France~\citep{edo2019immigration}, Denmark~\citep{dustmann2019refugee}, Austria~\citep{halla2017immigration, steinmayr2020contact}, and Greece~\citep{hangartner2019does}. As mentioned above, some of the factors that drive these negative effects may be less relevant in lower-income countries. We contribute to this literature by exploring the effect of refugees' proximity on the migration policy preferences of host community populations in a low-income country.
+
+Focused almost exclusively on the Global South, the second strand of research explores whether the presence of refugees is associated with a greater risk of conflict~\citep{jacobsen2002state}. Earlier studies highlighted possible tensions with local citizens that are exacerbated by resource competition or ethnic rivalry~\citep{salehyan2006refugees,ruegger2017}. Much of this scholarship recognizes that refugees are often victims of conflict~\citep{onoma2013,fisk2018,bohmelt2019,savun2019}. Recent research suggests that conflict between host communities and refugees may be avoided if refugees' presence attracts aid and economic activity that benefits both~\citep{lehmann2020does}. We complement this literature on the refugee--conflict nexus, which thus far has relied on cross-country analysis, by exploiting---following \citet{zhoushaver2021}---within-country variation in exposure to refugee settlements.              
+
+The third strand explores the welfare consequences of refugees' presence on host communities in developing countries. For example, past studies have explored the effects of migrant presence on labor market outcomes~\citep{fallah2019impact, ceritoglu2017impact}, housing prices~\citep{rozo2021refugee} and/or commodity prices~\citep{tumen2016economic}, healthcare~\citep{aygun2020effect, wang2019intergenerational}, education~\citep{tumen2021effect, bilgili2019education}, or general welfare~\citep{taylor2016economic}. However, without auxiliary data (such as survey data on policy preferences regarding refugee policies), these studies cannot tell us how the economic consequences of refugee hosting affect social cohesion (if at all). 
+
+We contribute to this body of work in three main ways. First, we explore how refugees' presence affects three domains: health care access and utilization, primary and secondary education services, and infrastructure (roads) quality. The consistency of the findings across these domains increases our confidence in the direction of the effect of refugee presence. In a second contribution, unlike past studies, we link the economic consequences of refugees' presence and locals' policy preferences and behavior. Third, we use a continuous measure of refugees' presence that integrates information on both refugee settlements' distances from the host community and population sizes, and allows localities to be affected by more than one settlement.  
+
+Building on this prior research, we test whether government and humanitarian aid agencies’ resource allocation decisions ensure that nearby communities do not carry a disproportionate burden of hosting refugees. We first explore whether localities that are geographically \textit{proximate} to \textit{larger} refugee settlements (i.e., those that have greater exposure to refugees) have better access to public goods and development outcomes because they benefit from the increased aid and resources flowing into these settlements. If this is the case, we contend, a backlash against refugees and refugee policies in host communities is much less likely.
+
+
+\section{Context}
+\label{sec:context}
+
+Located in proximity to several fragile states that have experienced civil war and displacement -- including South Sudan, Burundi, and the DRC, Uganda hosts one of the largest refugee populations in the world (see Figure \ref{fig:UgandaRefPop}). About 65 percent of the country's refugee population is from South Sudan; the remainder come from other East African countries, mainly the DRC (27 percent) and to a lesser extent Burundi, Somalia, Rwanda, Eritrea, and Ethiopia~\citep{world2019informing}.
+
+%[Number of refugees and aid in Uganda overtime]
+<<UgandaRefPop, eval = TRUE, echo = FALSE, tidy=TRUE, fig.width = 9, fig.height = 3.2, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="Impact of the South Sudanese civil war on the number of refugees in Uganda (left), and total refugee-related aid from international organizations (right). The red line indicates the onset of the war in December 2013. Data source: UNHCR, World Bank.">>=
+
+# Plot showing increased refugee numbers over time
+
+allrefpop$Value[allrefpop$Value == "*"] <- NA
+allrefpop$Value <- as.numeric(as.character(allrefpop$Value))
+
+ugandarefpop <- allrefpop[allrefpop$Country...territory.of.asylum.residence == "Uganda" &
+                                allrefpop$Population.type == "Refugees (incl. refugee-like situations)",]
+
+ugandarefpop$Value <- as.numeric(as.character(ugandarefpop$Value))
+
+ugaref_pop_byorigin <- ggplot(data= ugandarefpop, aes(x= Year, y= Value/1000, group=Origin)) +
+    geom_line(aes(colour=Origin)) +
+    #scale_x_continuous(breaks=seq(1980,2015,10)) +
+    ylab("Number of refugees (thousands)") +
+    xlab("Year") +
+    xlim(1995, 2017) +
+    #ylim(0, 80) +
+    theme(panel.background = element_blank(),
+        legend.title = element_blank(),
+        panel.border = element_rect(colour = "gray60", fill=NA, size=.8),
+        legend.justification = c(0, 1), 
+        legend.position= c(0.03, .98),
+        legend.key=element_blank(),
+        legend.direction="horizontal",
+        plot.title = element_text(size = 11)) +
+  ggtitle("Uganda refugee population over time, by origin")
+
+
+ugandarefpop1 <- ugandarefpop %>% 
+  group_by(Year) %>% 
+  summarise(Value = sum(Value, na.rm = T),
+            Origin = "All")
+
+ugandarefpop2 <- rbind(ugandarefpop1,
+                       ugandarefpop[ugandarefpop$Origin == "South Sudan", c("Year", "Value", "Origin")])
+
+ugaref_pop <- ggplot(data= ugandarefpop2[ugandarefpop2$Year > 1999,], 
+                     aes(x= Year, y= Value/1000, group=Origin)) +
+    geom_line(color = "black",
+              aes(lty=Origin)) +
+    ylab("Number of refugees (thousands)") +
+    xlab("Year") +
+    scale_y_continuous(breaks=seq(0,1400,200)) +
+    geom_vline(xintercept = 2014, colour = "#ba0000") +
+    geom_text(x=2009, y=700, label="South Sudanese\nCivil War", size = 3) + 
+    theme(panel.background = element_blank(),
+        panel.border = element_rect(colour = "gray60", fill=NA, size=.8),
+        legend.title = element_blank(),
+        legend.justification = c(0, 1), 
+        legend.position= c(0.03, .98),
+        legend.key=element_blank())
+
+
+# Plot showing increased newspaper attention on refugees over time
+newspaperplot <- newspaper %>%
+  mutate(date = lubridate::ymd(dates),
+         month_year = lubridate::floor_date(date, "year")) %>%
+  group_by(month_year) %>%
+  count() %>%
+  filter(month_year < "2020-01-01") %>%
+  ggplot(aes(x = month_year, y = n)) + 
+  geom_line() +
+  labs(x = "Year", y = "Newspaper articles about refugees") + 
+  geom_vline(xintercept = as.Date("2014-01-01"), colour = "#ba0000") +
+  #geom_text(x=as.Date("2007-01-01"), y=1400, label="South Sudanese Civil War", size = 3) + 
+  theme(panel.background = element_blank(),
+        panel.border = element_rect(colour = "gray60", fill=NA, size=.8),
+        legend.title = element_blank(),
+        legend.justification = c(0, 1), 
+        legend.position= c(0.03, .98),
+        legend.key=element_blank(),
+        legend.direction="horizontal")
+
+
+newspaperplot_bysource <- newspaper %>%
+  mutate(date = lubridate::ymd(dates),
+         month_year = lubridate::floor_date(date, "month")) %>%
+  group_by(month_year, source) %>%
+  count() %>%
+  ggplot(aes(x = month_year, y = n, colour = source)) + 
+  geom_line()
+
+# Plot showing increased refugee aid over time
+aidplot <- aidtotals %>%
+  filter(year < 2021) %>%
+  mutate(aid_level_mil = aid_level/1000000) %>%
+  ggplot(aes(year, aid_level_mil)) + 
+    geom_line() +
+  labs(x = "Year", y = "Total refugee aid (millions)") + 
+  #geom_vline(xintercept = 2014, colour = "#ba0000") +
+  theme(panel.background = element_blank(),
+        panel.border = element_rect(colour = "gray60", fill=NA, size=.8),
+        legend.title = element_blank(),
+        legend.justification = c(0, 1), 
+        legend.position= c(0.03, .98),
+        legend.key=element_blank(),
+        legend.direction="horizontal")
+
+####
+ugaref_pop + aidplot
+
+@
+
+Uganda's refugee hosting policies are considered inclusive for two main reasons. First, its open door asylum policy means that refugees and asylum seekers are not turned back at the border, forcibly repatriated, or deported. Second, its \textit{self-reliance strategy} (SRS), which we will describe in more detail below, allows refugees to self-settle, find employment, start businesses, and access local public services, such as schools and health centers. They are even given a small plot of land \citep{sharpe2012refugee,ahimbisibwe2019uganda,ronald2020assessment}. 
+
+The inclusiveness of Uganda's refugee and asylum policies---as codified in its 2006 National Refugees Act---partly explain why it attracts so many refugees~\citep{BlairGrossmanWeinstein}. Based on data collected on refugee and asylum policies in a large sample of 128 developing countries, \citet{blair2021forced} ranked Uganda as having the second-most liberal refugee and asylum policies in their sample. It is also a party to the 1951 Convention Relating to the Status of Refugees and its 1977 protocol, and a signatory of the 1969 Organization of African Unity Convention Governing the Specific Aspects of Refugee Problems in Africa. 
+
+\subsection*{Policy framework for refugee hosting in Uganda}
+
+Unlike in many other developing countries---including neighboring Tanzania and Kenya, where refugees are forced to live in camps and have limited rights---those in Uganda can self-settle. Over 95 percent of refugees, however, choose to reside in one of 42 designated refugee settlements across 13 districts where they are provided with basic assistance such as small land plots, food, and non-food items.\footnote{Asylum seekers in Kampala and other urban centers are not provided with such assistance.} UNHCR manages the allocation of refugees to various settlements in close collaboration with the Office of the Prime Minister (OPM). Allocation decisions are based mainly on the settlement's capacity, the refugees' county of origin and ethnicity, and whether they are joining family members already residing in the country~\citep{d2021refugee}.\footnote{We confirmed through extensive interviews with OPM staff and UNHCR Uganda staff that asylum seekers and refugees, provided they do not live in urban Kampala, cannot select their specific residency. In sum, we do not believe selection is a major concern in this context.}
+
+%[Map showing the location of refugees in Uganda over time]
+<<exposure_heatmap, eval = FALSE, echo = FALSE, tidy=TRUE, fig.width = 8, fig.height = 8, out.width= ".87\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="Locations of refugee settlements, 2001--2020. Refugee settlements indicated in blue, and parishes (our unit of analysis) in orange. Darker orange parishes denote higher level of exposure to refugees.">>=
+
+setwd("Paper_Inputs")
+
+## Load shapefiles
+refsites <- st_read("ugakaimug/settlement_boundaries.shp", quiet = TRUE)
+refsites_kitgum_okollo <- st_read("Kitgum and Okollo/Boundaries_Kitgum_Okollo.shp", quiet = TRUE)
+refsites_kitgum_okollo <- st_transform(refsites_kitgum_okollo, st_crs(refsites))
+country <- st_read("Uganda_countryboundaries_adm0/uga_admbnda_adm0_UBOS_v2.shp", quiet = TRUE)
+refsites_mungula <- st_read("UGA_mungula_ii/UGA_mungula_ii.shp", quiet = TRUE)
+refsites_mungula <- st_transform(refsites_mungula, st_crs(refsites))
+refsites_mungula = refsites_mungula %>% 
+  mutate(Name_setlm = "Mungula II", District = "Adjumani", Sqkm = 10.279261) %>%
+  dplyr::select(District, Name_setlm, Sqkm, geometry)
+
+## -------------
+## Make datasets
+## -------------
+
+## Clean up refsites names
+refsites$Name_setlm <- as.character(refsites$Name_setlm)
+refsites$Name_setlm[4] <- "Oliji I"
+refsites$Name_setlm[5] <- "Oliji II"
+refsites$Name_setlm[17] <- "Maaji 1A"
+refsites$Name_setlm[18] <- "Maaji 1B"
+refsites$Name_setlm[30] <- "Palorinya I"
+refsites$Name_setlm[31] <- "Palorinya II"
+refsites$Name_setlm[32] <- "Palorinya III"
+refsites$Name_setlm[33] <- "Palorinya IV"
+refsites$Name_setlm[34] <- "Palorinya V"
+refsites$Name_setlm[35] <- "Palorinya VI"
+refsites$Name_setlm[36] <- "Palorinya VII"
+refsites$Name_setlm[37] <- "Palorinya VIII"
+refsites$Name_setlm[38] <- "Palorinya IX"
+refsites$Name_setlm[39] <- "Palorinya X"
+
+settlement_pops <- df_pol %>% 
+  dplyr::select(year, ends_with(" Population")) %>%
+  pivot_longer(cols = ends_with(" Population"), names_to = "Name_setlm", values_to = "population") %>%
+  mutate(Name_setlm = gsub(" Population", "", Name_setlm)) %>%
+  distinct()
+
+open_2001 <- settlement_pops %>% filter(population > 0 & year == 2001) %>% pull(Name_setlm) 
+open_2006 <- settlement_pops %>% filter(population > 0 & year == 2006) %>% pull(Name_setlm) 
+open_2011 <- settlement_pops %>% filter(population > 0 & year == 2011) %>% pull(Name_setlm) 
+open_2016 <- settlement_pops %>% filter(population > 0 & year == 2016) %>% pull(Name_setlm) 
+open_2020 <- settlement_pops %>% filter(population > 0 & year == 2020) %>% pull(Name_setlm) 
+
+
+df_pol_exposure <- df_pol_full %>%
+  dplyr::select(parish_id, D_02_ID, year, starts_with("nearest_exposure"))
+
+## 2001
+parish_01 <- parish %>%
+  left_join(
+    df_pol_exposure %>% 
+      filter(year == 2001),
+    by = c("P_02_ID" = "parish_id")
+  )
+
+## 2006
+parish_06 <- parish %>%
+  left_join(
+    df_pol_exposure %>% 
+      filter(year == 2006),
+    by = c("P_02_ID" = "parish_id")
+  ) 
+
+## 2011
+parish_11 <- parish %>%
+  left_join(
+    df_pol_exposure %>% 
+      filter(year == 2011),
+    by = c("P_02_ID" = "parish_id")
+  )
+
+## 2016
+parish_16 <- parish %>%
+  left_join(
+    df_pol_exposure %>% 
+      filter(year == 2016),
+    by = c("P_02_ID" = "parish_id")
+  )
+
+## 2020
+parish_20 <- parish %>%
+  left_join(
+    df_pol_exposure %>% 
+      filter(year == 2020),
+    by = c("P_02_ID" = "parish_id")
+  )
+
+## -------------
+## Plot function
+## -------------
+plot_exposure <- function(x, plot_title = NULL){
+  
+  map_01 <- ggplot(parish_01, aes(fill = {{x}})) + 
+    geom_sf(lwd = .05) + 
+    geom_sf(data = refsites %>% 
+              filter(Name_setlm %in% open_2001), fill = "blue",
+            alpha = .8) + 
+    geom_sf(data = refsites_kitgum_okollo %>% 
+              filter(Name %in% open_2001), fill = "blue", alpha = .8) +
+    labs(title = "2001") + 
+    theme_map() + 
+    theme(legend.position = "none")
+  
+  map_06 <- ggplot(parish_06, aes(fill = {{x}})) + 
+    geom_sf(lwd = .05) + 
+    geom_sf(data = refsites %>% filter(Name_setlm %in% open_2006), 
+            fill = "blue", alpha = .8) + 
+    geom_sf(data = refsites_kitgum_okollo %>% 
+              filter(Name %in% open_2006), fill = "blue", alpha = .8) +
+    labs(title = "2006") + 
+    theme_map() + 
+    theme(legend.position = "none")
+  
+  map_11 <- ggplot(parish_11, aes(fill = {{x}})) + 
+    geom_sf(lwd = .05) + 
+    geom_sf(data = refsites %>% filter(Name_setlm %in% open_2011), 
+            fill = "blue", alpha = .8) + 
+    geom_sf(data = refsites_kitgum_okollo %>% 
+              filter(Name %in% open_2011), fill = "blue", alpha = .8) +
+    labs(title = "2011") + 
+    theme_map() + 
+    theme(legend.position = "none")
+
+  map_16 <- ggplot(parish_16, aes(fill = {{x}})) + 
+    geom_sf(lwd = .05) + 
+    geom_sf(data = refsites %>% filter(Name_setlm %in% open_2016), 
+            fill = "blue", alpha = .8) + 
+    geom_sf(data = refsites_kitgum_okollo %>% 
+              filter(Name %in% open_2016), fill = "blue", alpha = .8) +
+    labs(title = "2016") + 
+    theme_map() + 
+    theme(legend.position = "none")
+  
+  map_20 <- ggplot(parish_20, aes(fill = {{x}})) + 
+    geom_sf(lwd = .05) + 
+    geom_sf(data = refsites %>% filter(Name_setlm %in% open_2020), 
+            fill = "blue", alpha = .8) + 
+    geom_sf(data = refsites_kitgum_okollo %>% 
+              filter(Name %in% open_2020), fill = "blue", alpha = .8) +
+    geom_sf(data = refsites_mungula %>% 
+              filter(Name_setlm %in% open_2020), fill = "blue", alpha = .8) + 
+    labs(title = "2020") + 
+    theme_map() + 
+    theme(legend.position = "none")
+  
+  (map_01 + map_06 + map_11) / (map_16 + map_20) + 
+    plot_annotation(title = plot_title) &
+    scale_fill_gradient(
+      low = "white", high = "#D55E00", na.value = "grey"
+    ) 
+  
+}
+
+## ---------------------
+## Create exposure plots
+## ---------------------
+
+#plot_exposure(nearest_exposure, "Nearest Presence Values for Parishes")
+
+plot_exposure(nearest_exposure_plus_20) #Nearest + 20km Presence Values for Parishes
+
+#plot_exposure(nearest_exposure_plus_50, "Nearest + 50km Presence Values for Parishes")
+
+@
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=1\linewidth]{heatmap_nearest20_2020_kitgumcorrection}
+  \caption{Locations of refugee settlements, 2001--2020. Refugee settlements indicated in blue, and parishes (our unit of analysis) in orange. Darker orange parishes denote higher level of exposure to refugees.}
+  \label{fig:exposure_heatmap}
+\end{center}
+\end{figure}
+
+Two major regulatory frameworks guide refugee hosting in Uganda---the 2006 National Refugee Act and the 2010 Refugee Regulations introduced to operationalize it. This legal framework provides refugees with freedom of movement and religion, the right to access social services such as health, water and sanitation and education, the right to documentation (e.g., birth and death certificates, identity cards), the right to own and rent land for agricultural use and shelter, the right to start a business or seek employment, the right to receive fair justice, the right to transfer assets within and outside the country, and the right of association~\citep{nabuguzi1993refugees,sharpe2012refugee}. 
+
+These rights and freedoms are designed to allow refugees to establish their own livelihoods and attain a degree of self-reliance~\citep{ronald2020assessment}. However, since refugee-hosting districts are among the poorest and least developed in the country, access to basic services such as health care, education, and sanitation has been a major concern~\citep{world2019informing}.
+
+%[Plots comparing refugee-hosting and non-hosting districts by their quality of public goods in baseline year]
+<<distlevel_development, eval = TRUE, echo = FALSE, tidy=TRUE, fig.width = 8, fig.height = 5, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="Districts' baseline public goods provision ranked from best (left) to worst (right). Refugee-hosting districts (blue) typically provided lower-quality public goods than non-hosting districts (gray) at baseline.">>=
+
+## Clean up refsites names
+refsites$Name_setlm <- as.character(refsites$Name_setlm)
+refsites$Name_setlm[4] <- "Oliji I"
+refsites$Name_setlm[5] <- "Oliji II"
+refsites$Name_setlm[17] <- "Maaji 1A"
+refsites$Name_setlm[18] <- "Maaji 1B"
+refsites$Name_setlm[30] <- "Palorinya I"
+refsites$Name_setlm[31] <- "Palorinya II"
+refsites$Name_setlm[32] <- "Palorinya III"
+refsites$Name_setlm[33] <- "Palorinya IV"
+refsites$Name_setlm[34] <- "Palorinya V"
+refsites$Name_setlm[35] <- "Palorinya VI"
+refsites$Name_setlm[36] <- "Palorinya VII"
+refsites$Name_setlm[37] <- "Palorinya VIII"
+refsites$Name_setlm[38] <- "Palorinya IX"
+refsites$Name_setlm[39] <- "Palorinya X"
+
+settlement_pops <- df_pol %>% 
+  dplyr::select(year, ends_with(" Population")) %>%
+  pivot_longer(cols = ends_with(" Population"), names_to = "Name_setlm", values_to = "population") %>%
+  mutate(Name_setlm = gsub(" Population", "", Name_setlm)) %>%
+  distinct()
+
+open_2001 <- settlement_pops %>% filter(population > 0 & year == 2001) %>% pull(Name_setlm) 
+open_2006 <- settlement_pops %>% filter(population > 0 & year == 2006) %>% pull(Name_setlm) 
+open_2011 <- settlement_pops %>% filter(population > 0 & year == 2011) %>% pull(Name_setlm) 
+open_2016 <- settlement_pops %>% filter(population > 0 & year == 2016) %>% pull(Name_setlm) 
+
+## Create dataset
+df_distlevel_dev <- df_pol %>%
+  dplyr::select(
+    district, year,
+    primary_schools_per_thousand_kids_parish_level_standardized, 
+    schools_per_thousand_kid_standardized,
+    health_access_index4,
+    road_density_standardized
+  ) %>%
+  pivot_longer(cols = -c(district, year), names_to = "var") %>%
+  filter((year == 2011 & var == "road_density_standardized") | 
+           (year == 2001 & var == "health_access_index4") | 
+           year == 2001 & var %in% c("primary_schools_per_thousand_kids_parish_level_standardized",
+                                     "schools_per_thousand_kid_standardized")) %>%
+  drop_na(value) %>%
+  group_by(district, year, var) %>%
+  summarize(value = mean(value))
+
+## Get indicator for refugee presence in district
+refsites_to_district <- refsites %>% st_drop_geometry() %>%
+  dplyr::select(District, Name_setlm) %>%
+  mutate(District = case_when(District == "Lamwo"~"Kitgum",
+                              District == "Okollo"~"Arua",
+                              District == "Koboko"~"Arua",
+                              TRUE~District)) %>%
+  bind_rows(
+    refsites_kitgum_okollo %>% st_drop_geometry() %>%
+      dplyr::select(Name) %>%
+      rename(Name_setlm = Name) %>%
+      mutate(District = c("Arua", "Kitgum"))
+  ) %>%
+  mutate(open_2001 = case_when(Name_setlm %in% open_2001~1, TRUE~0),
+         open_2006 = case_when(Name_setlm %in% open_2006~1, TRUE~0),
+         open_2011 = case_when(Name_setlm %in% open_2011~1, TRUE~0),
+         District = tolower(District))
+
+districts_hosting_2001 <- unique(refsites_to_district$District[refsites_to_district$open_2001 == 1])
+districts_hosting_2006 <- unique(refsites_to_district$District[refsites_to_district$open_2006 == 1])
+districts_hosting_2011 <- unique(refsites_to_district$District[refsites_to_district$open_2011 == 1])
+
+## Plot
+df_distlevel_dev %>%
+  mutate(district = case_when(district == "hoima"~"kikuube",
+                              district == "mbarara"~"isingiro",
+                              district == "masindi"~"kiryandongo",
+                              district == "kyenjojo"~"kyegegwa",
+                              TRUE~district)) %>%
+  mutate(hosting = case_when(
+    year == 2001 & district %in% districts_hosting_2001~"Host District",
+    year == 2006 & district %in% districts_hosting_2006~"Host District",
+    year == 2011 & district %in% districts_hosting_2011~"Host District",
+    TRUE~"Not a Host District"),
+    var = case_when(
+      var == "primary_schools_per_thousand_kids_parish_level_standardized"~"Primary School Access (Baseline Year = 2001)",
+      var == "schools_per_thousand_kid_standardized"~"Secondary School Access (2001)",
+      var == "health_access_index4"~"Health Access (2001)",
+      var == "road_density_standardized"~"Road Density (2011)"),
+    var = as.factor(var),
+    var = fct_relevel(var, "Primary School Access (Baseline Year = 2001)",
+                      "Secondary School Access (2001)",
+                      "Health Access (2001)", 
+                      "Road Density (2011)")
+  ) %>%
+  ggplot(aes(reorder_within(district, -value, var), value, fill = hosting)) + 
+  geom_bar(stat = "identity") + 
+  facet_wrap(~var, scales = "free_x") +
+  scale_fill_manual(values = c("blue", "lightgrey")) + 
+  labs(x = "District") + 
+  theme(panel.background = element_blank(),
+        panel.border = element_rect(colour = "gray60", fill=NA, size=.8),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank()) 
+
+@
+
+Figure~\ref{fig:exposure_heatmap} maps the refugee settlements (in blue) for our five study years. The parishes---our unit of analysis, further discussed below---are shaded in orange by the intensity of their refugee presence: in line with our measure, the darkest areas surround the settlements. These maps also show that most settlements are located in the West Nile subregion; about 70 percent of refugees live in this area. Figure~\ref{fig:distlevel_development} compares refugee-hosting districts (blue) with non-hosting districts (gray) based on the quality of their public goods provision in our baseline year 2001. Higher values correspond to better access to primary and secondary education, health, and road density.\footnote{All four outcomes are standardized to have a mean of 0 and SD of 1.} Prior to the influx of refugees after 2014, hosting districts generally had worse public goods provision and infrastructure than non-hosting districts. 
+
+Uganda's refugee hosting policies are inclusive in another important dimension. In 2004, Uganda updated it's Self-Reliance Strategy (SRS) to address concerns that tensions may arise among locals if refugee hosting will overextend the capacity of existing local public services, and in recognition that refugees were likely to stay for a protracted period. The SRS was replaced by Development Assistance for Refugee Hosting Areas but kept its initial focus. The Refugee and Host Population Empowerment strategic framework updated the SRS model in 2016~\citep{ronald2020assessment}. The Comprehensive Refugee Response Framework (CRRF), which replaced the SRS model in 2017, more strongly emphasizes the development approach to hosting refugees---that international humanitarian and development actors and government ministries, departments, and agencies coordinate to support both refugees and host communities.\footnote{See \url{https://opm.go.ug/comprehensive-refugee-response-framework-uganda/} for more information.} This approach is designed to prevent host communities from carrying a disproportionate burden for hosting refugees, and to ensure that public services made available by the international humanitarian community do not disproportionately favor refugees at the expense of locals. 
+
+To descriptively confirm that aid targets refugee settlements and nearby host communities, we map out all current projects conducted by the World Bank related to refugees. These projects cover infrastructural improvements (e.g. bridges, roads, schools, health clinics), environmental projects (forestry, agriculture, solar panels), and entrepreneurial grants. Figure \ref{fig:worldbankproj_maps} descriptively shows that they are precisely located in and near where refugee settlements are, thereby also benefiting local host communities.
+
+<<worldbankproj_maps, eval = TRUE, echo = FALSE, tidy=TRUE, fig.width = 8.5, fig.height = 4, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="This set of maps shows World Bank funded refugee-related projects -- livelihood grants (red), environmental projects (green), and infrastructural improvements (purple) -- from 2018 to 2020 in relation to where the refugee settlements (blue) are located.">>=
+
+setwd("Paper_Inputs")
+
+## Load shapefiles
+refsites <- st_read("ugakaimug/settlement_boundaries.shp", quiet = TRUE)
+refsites_kitgum_okollo <- st_read("Kitgum and Okollo/Boundaries_Kitgum_Okollo.shp", quiet = TRUE)
+refsites_kitgum_okollo <- st_transform(refsites_kitgum_okollo, st_crs(refsites))
+country <- st_read("Uganda_countryboundaries_adm0/uga_admbnda_adm0_UBOS_v2.shp", quiet = TRUE)
+
+## Clean up refsites names
+refsites$Name_setlm <- as.character(refsites$Name_setlm)
+refsites$Name_setlm[4] <- "Oliji I"
+refsites$Name_setlm[5] <- "Oliji II"
+refsites$Name_setlm[17] <- "Maaji 1A"
+refsites$Name_setlm[18] <- "Maaji 1B"
+refsites$Name_setlm[30] <- "Palorinya I"
+refsites$Name_setlm[31] <- "Palorinya II"
+refsites$Name_setlm[32] <- "Palorinya III"
+refsites$Name_setlm[33] <- "Palorinya IV"
+refsites$Name_setlm[34] <- "Palorinya V"
+refsites$Name_setlm[35] <- "Palorinya VI"
+refsites$Name_setlm[36] <- "Palorinya VII"
+refsites$Name_setlm[37] <- "Palorinya VIII"
+refsites$Name_setlm[38] <- "Palorinya IX"
+refsites$Name_setlm[39] <- "Palorinya X"
+
+settlement_pops <- df_pol %>% 
+  dplyr::select(year, ends_with(" Population")) %>%
+  pivot_longer(cols = ends_with(" Population"), names_to = "Name_setlm", values_to = "population") %>%
+  mutate(Name_setlm = gsub(" Population", "", Name_setlm)) %>%
+  distinct()
+
+## Load parish shapefile
+parish <- st_read("Uganda_Parish_Boundaries_2002_dissolved_final/uganda_2002_dissolve4.shp", quiet = TRUE) %>%
+  mutate(P_02_ID = as.character(P_02_ID))
+
+open_2001 <- settlement_pops %>% filter(population > 0 & year == 2001) %>% pull(Name_setlm) 
+open_2006 <- settlement_pops %>% filter(population > 0 & year == 2006) %>% pull(Name_setlm) 
+open_2011 <- settlement_pops %>% filter(population > 0 & year == 2011) %>% pull(Name_setlm) 
+open_2016 <- settlement_pops %>% filter(population > 0 & year == 2016) %>% pull(Name_setlm) 
+open_2020 <- settlement_pops %>% filter(population > 0 & year == 2020) %>% pull(Name_setlm) 
+
+## CIGs
+wb_cig <- readxl::read_xlsx("World Bank Project Data sets/CIGs.xlsx",
+                            sheet = "FINAL LIVELIHOOD GRANT APRIL...") %>%
+  rename(latitude = `_Record GPS Coordinate_latitude`,
+         longitude = `_Record GPS Coordinate_longitude`) %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = st_crs(country))
+
+gg_cigs <- ggplot(country) + 
+  geom_sf(fill = "white") + 
+  geom_sf(data = refsites_kitgum_okollo %>% 
+          filter(Name %in% open_2020), fill = "blue", alpha = .8) +
+    geom_sf(data = wb_cig, colour = "#ba0000", alpha = .3) + 
+  geom_sf(data = refsites %>% filter(Name_setlm %in% open_2020), fill = "blue",
+          alpha = .9) + 
+  labs(title = "Livelihood Grants") + 
+  theme_map()
+
+## SEM
+wb_sem <- readxl::read_xlsx("World Bank Project Data sets/SEM.xlsx",
+                            sheet = "FINAL SEM PROCESS APRIL 2021") %>%
+  rename(latitude = `_Capture GPS Coordinate_latitude`,
+         longitude = `_Capture GPS Coordinate_longitude`) %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = st_crs(country))
+
+gg_sem <- ggplot(country) + 
+  geom_sf(fill = "white") + 
+  geom_sf(data = refsites_kitgum_okollo %>% 
+          filter(Name %in% open_2020), fill = "blue", alpha = .8) +
+    geom_sf(data = wb_sem, colour = "#009E73", alpha = .3) + 
+  geom_sf(data = refsites %>% filter(Name_setlm %in% open_2020), fill = "blue",
+          alpha = .9) + 
+  labs(title = "Environmental Projects") + 
+  theme_map()
+
+## SESI
+wb_sesi <- readxl::read_xlsx("World Bank Project Data sets/SESI.xlsx",
+                            sheet = "SESI PROCESS TRACKING TOOL_M...") %>%
+  rename(latitude = `_Record GPS Coordinate_latitude`,
+         longitude = `_Record GPS Coordinate_longitude`) %>%
+  filter(!is.na(latitude)) %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = st_crs(country))
+
+gg_sesi <- ggplot(country) + 
+  geom_sf(fill = "white") + 
+  geom_sf(data = refsites_kitgum_okollo %>% 
+          filter(Name %in% open_2020), fill = "blue", alpha = .8) +
+    geom_sf(data = wb_sesi, colour = "#663399", alpha = .3) + 
+  geom_sf(data = refsites %>% filter(Name_setlm %in% open_2020), fill = "blue",
+          alpha = .9) + 
+  labs(title = "Infrastructural Improvements") + 
+  theme_map()
+
+# plot
+gg_cigs + gg_sem + gg_sesi 
+
+@
+
+It is somewhat unclear how successful Uganda's integration policy has been, mainly because of the paucity of studies analyzing how the presence of refugees has affected host communities, and their limited scope. Based on focus group discussions in host communities near the Nakivale refugee settlement, \citet{ronald2020assessment} reports that host communities are concerned about environmental degradation. Similarly, based on stakeholder interviews, \citet{IRRI2019} also reports tensions over natural resources, especially around the allegation that refugees engage in illegal logging.\footnote{See \citet{gianvenuti2020assessment} for more details.}  
+
+\citet{zhu2016economic} assess the impacts of World Food Program aid within a 15 km radius of two refugee settlements in Uganda. They find that the average refugee household receiving cash food assistance increases the annual real income in the local economy. Here, locals around the settlements benefited from aid provided to refugees because on average, they are in a better position to increase their supply of goods and services as the local demand rises. \citet{kreibaum2016their} corroborates the finding that host communities near refugee settlements in Uganda have relatively higher consumption levels using data on three south-western districts, though the effect is small in magnitude. \citet{d2021refugee} find that the presence of refugees has only modest effects on local households' consumption levels. The authors attribute this finding \textit{not} to an increase in demand for local produce, but to greater participation by host households in paid employment in aid agencies, and to the resulting increase in wage incomes. However, the effects they observe are small, and concentrated in areas very near refugee settlements.\footnote{Note that both \citet{zhu2016economic} and \citet{d2021refugee} use original cross-sectional surveys. Without pre-treatment data, it is harder for them to make causal claims.}
+
+Most relevant to our study, \citet{kreibaum2016their} reports that access to private primary schools (but not public schools or health services) has increased at a greater rate as a function of refugee presence. They measure refugee presence at the district level (refugee share of the district population) and focus on the south-western districts between 2002 and 2010. Thus, by including all of Uganda at the parish-year level as well as the post-2014 influx, we extend their analysis. In sum, our study is the first to measure the effects of refugee presence on service delivery outcomes in Ugandan host communities. 
+
+
+\section{Research Design}
+\label{sec:design} 
+
+In this section we describe the study's data sources, the key variables and how we construct them, and our empirical strategy. Our study relies on spatial and temporal variation of refugee settlement in Uganda from neighboring countries.
+
+% Units of analysis
+\subsection{Parish-Years as Main Units of Analysis}
+
+Our main unit of analysis is parish-years. Parishes (N = \Sexpr{length(unique(df_pol$parish_id))} at the time of the 2002 census) are the smallest administrative unit above the village level; they typically encompass an average of five villages. Our study period covers five years: 2001, 2006, 2011, 2016, and 2020. Since the arrival of large numbers of South Sudanese refugees began in 2014, we have several prior years to compare periods when parishes hosted moderate numbers of refugees with the much larger numbers in 2016 and 2020. 
+
+Over the past two decades, the number of parishes in Uganda has increased from 5,238 in the 2002 census to 7,241 in the 2014 census to over 10,000 today (\citeyear{ug2016census}). This administrative fragmentation means that our units are not stable over our study period. In a major contribution, we constructed an original parish dataset to facilitate research throughout this time period.\footnote{For details, see Section \ref{SIsubsec:parishes} in the Supplementary Information (SI), \url{https://osf.io/sv92q/}.} We use shapefiles, census data, matching techniques, and manual corrections to ensure that we have the same administrative units over time, using 2001 parish boundaries as the constant unit throughout. 
+
+In the main regression specification we do not include all parishes. Given that we use a continuous measure of refugee presence, it is not \textit{a priori} clear whether a greater refugee presence matters beyond a certain radius. We therefore test the sensitivity of our findings to different sample radius cutoffs: parishes within 100km, 150km, or 200km of any refugee settlement in the baseline year of 2001, as well as all Ugandan parishes. In the paper, we present results with the 150km cutoff as our main specification, but we also show results with other cutoffs and all parishes in SI Section~\ref{SIsec:tables}. 
+
+
+% Refugee Presence 
+\subsection{Main Independent Variable: Refugee Presence}
+
+Refugee presence, our main independent variable of interest, is measured for each parish-year. We obtained shapefiles of refugee settlements over time, and collected population data for each settlement in our study years from UNHCR reports and with the help of UNHCR Uganda country staff. Figure \ref{fig:settlement_cellplot} in SI Section \ref{SIsubsec:cellplot} shows which settlements are open and their population levels across the study years. 
+
+We use this data to calculate a matrix of distances between each parish-year and each settlement open that year. We calculate distances from the boundaries of the parish polygons and refugee settlement polygons, as opposed to using their centroids, since some of these settlements are quite large. Along with distances to each settlement, we also know the population size of each settlement across the study years. Intuitively, our measure of exposure should be greater for parishes that are \textit{closer} to \textit{larger} settlements, particularly if they are near \textit{multiple} settlements.  
+
+We therefore operationalize \textit{refugee presence} in these three ways:
+
+1. Nearest: For each parish, exposure is only based on the nearest settlement $n$ in year $t$, ${\rm ihs}\left(\frac{\rm population_{nt}}{\rm distance_{nt}+1}\right)$, in which distance is measured in kilometers. 
+
+2. Nearest + 20: For each parish, exposure takes into account not only the nearest settlement $n$ in year $t$, but also all settlements $i$ within 20km of the parish, ${\rm ihs}\left(\frac{\rm population_{nt}}{\rm distance_{nt} +1} + \sum_{i \in {\rm rad}_{20km, -n}} \frac{\rm population_{it}}{\rm distance_{it} +1}\right)$. 
+
+3. Nearest + 50: For each parish, takes into account the nearest settlement $n$ in year $t$ and all settlements $i$ within 50km of the parish, ${\rm ihs}\left(\frac{\rm population_{nt}}{\rm distance_{nt} +1} + \sum_{i \in {\rm rad}_{50km, -n}} \frac{\rm population_{it}}{\rm distance_{it} +1}\right)$. 
+
+We take the inverse hyperbolic sine (ihs) of the quotient of settlement population and distance; otherwise, this measure would be left-skewed since most parishes have low levels of exposure to refugees. We standardize all presence measures to have a mean of 0 and standard deviation (SD) of 1 for ease of interpretation. For parishes within the 150km cutoff, Figure \ref{fig:exposure_measure} in the SI displays their raw exposure measures by year and the mean values, and it shows that there is a marked increase in all measures of exposure in 2016, which we would expect given the post-2014 influx of refugees. Figures \ref{fig:distribution_exposure} and \ref{fig:distribution_exposure_byyear} in the SI also show the distribution of our exposure measures. In sum, our refugee presence measures are continuous, consider both the size of and distance to proximate settlements, allow a locality to be affected by multiple settlements, and are more directly related to theory.
+
+
+% Outcomes of Interest
+\subsection{Outcomes: Public Goods Access and Utilization, Attitudes toward Migrants, and Insecurity}
+
+The main outcomes of interest for local public goods include newly constructed geocoded data on public primary schools, public secondary schools, health clinics and hospitals, health utilization, and road density. First, our primary school data on over 19,500 schools comes from the Uganda Education Management Information Systems, and is supplemented by about 2,700 additional schools manually collected by a Ugandan education consultant we hired to do manual checks. For each primary school, we have their geographic coordinates, founding year, and whether they were government funded (public). Intersecting these points with our parish shapefile gives us the number of primary schools per parish-year (and by type). We normalize these values per 1,000 primary-school-age children for our measure of \textit{Public Primary School Access}.
+
+Second, we use data on secondary schools provided by the Uganda Ministry of Education that was independently verified by the World Bank. For the more than 3,600 secondary schools, we have geographic coordinates, founding year, and whether the school is public. We similarly construct measures for \textit{Public Secondary School Access} by normalizing the number of secondary schools (by type) per 1,000 secondary-school-age children. For more details on primary and secondary school data construction, see SI Sections \ref{SIsubsec:primarydata} and \ref{SIsubsec:secondarydata}. 
+
+Third, to measure \textit{Health Access}, we compiled a geocoded list of approximately 6,800 health facilities in Uganda by merging the 2006 health facility lists from the Uganda Bureau of Statistics (UBoS), with the 2001, 2012, and 2017 master facilities lists from the Ministry of Health (MoH). For this outcome, we have data for each year in our study, except 2020. Uganda has four types of health facilities. Health center (HC)-2 facilities are small outpatient clinics that serve a few thousand people and treat common diseases like malaria. HC-3 facilities are subcounty-level outpatient clinics that have a larger staff, a maternity ward, and a laboratory. HC-4 facilities are county-level health facilities with inpatient wards and operating theaters. Finally, hospitals are at the district- or regional-level, which have all the services of HC-4 plus specialized units. For each HC type, the outcome measure of health access captures two dimensions: (a) {\it distance} to the nearest health facility; and (b) how {\it crowded} the facility is based on how many people the facility serves. The intuition is that parishes have better health access when their residents can travel shorter distances to facilities serving fewer people. To combine these factors, for each parish, we first calculated the distance and population served to the nearest facility of each type. We then rescaled and transformed these measures (since fewer people and shorter distance entail better access) and standardized it. 
+
+Fourth, since health access is based only on the number of \textit{new} facilities, it does not capture improvements to existing facilities (e.g., more providers, equipment, and medications). Although we do not have data on these improvements during our study period, we proxy for healthcare \textit{quality} by including a measure of \textit{Health Utilization}. Unlike the previous measures, which are constructed at the parish-year level, health utilization is an individual-level measure. It is derived from Demographic and Health Surveys (DHS) of over 30,000 Ugandan children and their households in 2006, 2011, and 2016. Our standardized utilization measure averages child health services (e.g., vaccinations, deworming, iron supplements), their mothers' maternal health services (e.g., tetanus injections before and during pregnancy, antenatal visits, delivery by health professionals), and household measures (e.g., insecticide-treated mosquito nets). Reassuringly, \textit{Health Utilization} is positively correlated with \textit{Health Access}. For more details on how both variables are constructed and validated, see SI Section~\ref{SIsubsec:healthdata}. 
+
+Fifth, to create a measure of \textit{Road Density}, we use two data sources: the Global Roads Open Access Data Set gathered by the NASA Socioeconomic Data and Applications Center from 2010, and the World Food Programme’s road networks shapefile from OpenStreetMap for 2017 and 2020. Thus for road density we only have measures for 2011, 2016, and 2020. For each parish polygon, we extract the total length of roads (km), weighted by the speed limit of each type of road. There are six types of roads in Uganda, ranging in speed from trail to highway. See SI Section \ref{SIsubsec:roaddata} for more details on road density data construction.  
+
+Sixth, we create an overall \textit{Public Goods Index} by taking the simple average of the public schools, road density, and health centers access measures, and standardize it. 
+
+Lastly, to assess public opinion, we use the Afrobarometer surveys.  
+The Afrobarometer is an in-person, clustered, stratified nationally representative survey that occurs approximately every three years. Each Afrobarometer round has about 2,400 adult citizen respondents, and we use Rounds 3 to 8 (2005 - 2019), which roughly correspond to our study years. These survey data are repeated cross-sections, not a panel, and not all questions are asked in every round. To be clear, we do not run the survey analyses at the parish-level since most parishes do not have any respondents; instead we use individual survey respondents as the unit of analysis. See SI Section \ref{SIsubsec:AB} for details on the sample sizes, years, and locations of the respondents per round. 
+
+We evaluate the following questions for attitudes towards migrants and migration policy:
+\vspace{-.4cm}
+
+\begin{itemize}
+\item Migrants can Move Freely (Rounds 6 and 8):
+\begin{Verbatim}[baselinestretch=1, xleftmargin=.2in, fontsize=\small]
+Statement 1: People living in East Africa should be able to move freely across 
+international borders in order to trade or work in other countries.
+Statement 2: Because foreign migrants take away jobs, and foreign traders sell 
+their goods at very cheap prices, governments should protect their own citizens 
+and limit the cross-border movement of people and goods.
+Strongly Agree with Statement 1 (1)... with Statement 2 (5). 
+\end{Verbatim}
+\item Migrant as Neighbors (Rounds 5--8): 
+\begin{Verbatim}[baselinestretch=1, xleftmargin=.2in, fontsize=\small]
+For each of the following types of people, please tell me whether you would like
+having people from this group as neighbors, dislike it, or not care: 
+Immigrants or foreign workers. Strongly Dislike (1)... Strongly Like (5). 
+\end{Verbatim}
+\end{itemize}
+
+\noindent We capture possible support for restrictive migration policies by exploring preferences for more expansive or limited naturalization criteria using a two-part question: {\it In your opinion, which of the following people have a right to be a citizen of Uganda? A citizen would have the right to get a Ugandan passport and to vote in Ugandan elections if they are at least 18 years old:}
+\vspace{-.4cm}
+
+\begin{itemize}
+\item Born Non-Ugandan (Round 5):
+\begin{Verbatim}[baselinestretch=1, xleftmargin=.2in, fontsize=\small]
+A person born in Uganda with two non-Ugandan parents? 
+Yes (1)/No (0). 
+\end{Verbatim}
+\item Able to Naturalize (Round 5):
+\begin{Verbatim}[baselinestretch=1, xleftmargin=.2in, fontsize=\small]
+A person who came from another country, but who has lived and worked in Uganda 
+for many years, and wishes to make Uganda his or her home? 
+Yes (1)/No (0). 
+\end{Verbatim}
+\end{itemize}
+
+To assess feelings of insecurity, we use the following two questions:
+\vspace{-.4cm}
+
+\begin{itemize}
+\item Feel Unsafe in Community (Rounds 5--8): 
+\begin{Verbatim}[baselinestretch=1, xleftmargin=.2in, fontsize=\small]
+Over the past year, how often, if ever, have you or anyone in your family: 
+Felt unsafe walking in your neighbourhood? Never (0)... Always (4). 
+\end{Verbatim}
+\item Feared Crime (Rounds 3--8): 
+\begin{Verbatim}[baselinestretch=1, xleftmargin=.2in, fontsize=\small]
+Over the past year, how often, if ever, have you or anyone in your family: 
+Feared crime in your own home? Never (0)... Always (4). 
+\end{Verbatim}
+\end{itemize}
+
+Since the possible responses to all of these questions are on different scales, we standardize all Afrobarometer measures to have a mean of 0 and SD of 1 for ease of comparison and interpretation. 
+
+To examine whether actual levels of insecurity changed as a function of refugee presence, we use ACLED data, which geocodes violent events. For each parish-year, we construct a binary variable, \textit{Any Violent Event}, which equals 1 if any of the following events occurred: violence against civilians, riot, attack, mob violence, or violent event. 
+
+% Controls 
+\subsection{Control Variables}
+
+We (flexibly) control for the following covariates in our parish-year analyses. From the 2002 census, we include measures of each parish's local population of Ugandans, average age, proportion male, literacy rate, unemployment rate, agriculture share, share of the parish population that is coethnic with the president, and average household wealth (based on a composite index of household items). We also include a binary indicator from ACLED for any violent events from 2002, as well as each parish's distance to the nearest oil well, distance to the nearest border, distance to a major road, and distance to Kampala, Uganda's capital. To prevent post-treatment bias, we only use the 2002 measures of these variables. We interact these time-invariant variables with year to allow their effects to change over time.
+
+For the individual-level analyses---for outcome based on the DHS and the Afrobarometer surveys---we control for respondents' gender, age, urban or rural residency, household wealth, and education attainment, and for location-based controls (distance to the nearest border, to the nearest major road, and to the capital). We further interact these demographic and location-based controls by year. 
+
+
+% Empirical strategy
+\subsection{Empirical Strategy}
+
+Since our main dataset is a parish-year panel with a continuous time-varying treatment, we use a difference-in-differences research design. We run the following OLS model interacting refugee presence (time varying) with year, interacting time-invariant controls with year, and including parish ($\eta_i$) and region-year ($\eta_{rt}$) fixed effects, with standard errors clustered at the parish level:
+
+\vspace{-.5cm}
+\begin{singlespace} 
+\begin{eqnarray*}
+y_{it} &=& \eta_i + \eta_{rt} + \beta_1 {\rm presence}_{it} + \beta_2 {\rm presence}_{it} \times {\bf 1}\{year_{it} = 2006\} + \beta_3 {\rm presence}_{it} \times {\bf 1}\{year_{it} = 2011\} \\ 
+&& + \beta_4 {\rm presence}_{it} \times {\bf 1}\{year_{it} = 2016\} + \beta_5 {\rm presence}_{it} \times {\bf 1}\{year_{it} = 2020\}\\ 
+&& + {\bf \lambda_1}{\bf x_i} \times {\bf 1}\{year_{it} = 2006\} + {\bf \lambda_2}{\bf x_i} \times {\bf 1}\{year_{it} = 2011\} + {\bf \lambda_3}{\bf x_i} \times {\bf 1}\{year_{it} = 2016\}\\
+&& + {\bf \lambda_4}{\bf x_i} \times {\bf 1}\{year_{it} = 2020\} + \epsilon_{it}
+\end{eqnarray*}
+\end{singlespace} 
+\vspace{-.2cm}
+
+\noindent where $i$ indexes parishes, $r$ indexes region, $t$ indexes year. The parish FEs allow us to account for time-invariant characteristics of each parish, while the region-year FEs allow us to account for plausible time-varying regional development swings. Basic year FEs account for time-varying shocks that are uniform across all regions, which might be sufficient if we only anticipate nationwide trends. Including region-year FEs and letting the effects of baseline controls vary over time also relates to the recent DiD literature \citep[e.g.][]{de2020two,goodman2021difference,sun2021estimating}, which discusses how the standard two-way fixed effects (TWFE) model under staggered treatment adoption can be biased when effects might be heterogeneous. 
+
+As a robustness check, we further relax the model specification by including district time trends, which ensures that all unobserved district-level differences that vary smoothly over time (e.g. district budgets) are purged from the effects of refugee presence. We also show results using the standard two-period (before 2014 versus after 2014) binary treatment (cutoff at the median) model.
+
+We use this main model for the household (DHS) and survey-based (Afrobarometer) outcomes that are measured repeatedly over time. For a few of the survey-based outcomes, we only have one year of observations for an outcome because certain Afrobarometer questions were only asked in a single round. In those cases, we run a cross-sectional analysis.
+
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Refugee Presence Improves Local Public Goods}
+
+Overall, we find that parishes with a greater refugee presence, particularly after the policy reforms, have better access to social services. Furthermore, we do not find evidence that greater levels of refugee presence provoke backlash in public opinion against migrants and migration policies. We report the results using the {\it Nearest + 20} refugee presence measure, along with a 150km radius cutoff. As robustness checks, SI Section \ref{SIsec:tables} shows the results using alternative presence measures and cutoffs. 
+
+Figure \ref{fig:development_plot} displays positive effects across public service outcomes. For these plots, \textit{higher values} correspond to \textit{greater access} and \textit{better infrastructure}. Note that as per our DiD regression model described above, `Baseline presence' (in the figures' x-axis) refers to the multivariate association between a 1-SD increase in refugee presence and the outcome of interest. By contrast, `Presence $\times$ 2006,' `Presence $\times$ 2011,' `Presence $\times$ 2016,' and `Presence $\times$ 2020' refer to the {\it change} in this multivariate relationship compared to the baseline year (usually 2001). 
+
+%[Development results coef plot]
+<<run_models_main, eval = TRUE, echo = FALSE, tidy=TRUE, warning=FALSE, message=FALSE>>=
+
+## formulas
+did_ctr_str_school <- paste0("%s ~ exposure + I((year == '2006')*exposure) + I((year == '2011')*exposure) + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_school, " | parish_id + region_year | 0 | parish_id")
+did_ctr_str_hc <- paste0("%s ~ exposure + I((year == '2006')*exposure) + I((year == '2011')*exposure) + I((year == '2016')*exposure) +", controls_health, " | parish_id + region_year | 0 | parish_id")
+did_ctr_str_road <- paste0("%s ~ exposure + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_road, " | parish_id + region_year | 0 | parish_id")
+
+## -------------------------------------------------
+## All possible specifications - non-health outcomes
+## -------------------------------------------------
+model_specs_main <- expand.grid(
+  sample = c("all"),
+  outcome = c(
+    "public_primary_schools_per_thousand_kids_parish_level",
+    "private_primary_schools_per_thousand_kids_parish_level",
+    "private_per_thousand_kid",
+    "public_per_thousand_kid",
+    "health_access_index4",
+    "road_density_standardized",
+    "PGindex_mean",
+    "minmax_count_pop_hcii_standardized", 
+    "multiply4_minmax_hciii_standardized", 
+    "multiply4_minmax_hciv_standardized", 
+    "multiply4_minmax_hcv_standardized"
+  ),
+  indep_var = c("nearest_exposure", "nearest_exposure_plus_20", 
+                "nearest_exposure_plus_50"),
+  distance_to_camp = c(100, 150, 200, NA),
+  stringsAsFactors = FALSE
+)
+
+registerDoMC(detectCores() - 1)
+run_all_models_main <- foreach(i = 1:nrow(model_specs_main)) %do% {
+  
+  ## Select outcome
+  outcome <- model_specs_main$outcome[i]
+    
+  ## Select distance
+  nearest_camp_distance <- model_specs_main$distance_to_camp[i]
+  if(is.na(nearest_camp_distance)){
+    nearest_camp_distance <- "full"
+  }
+    
+  ## Select main iv
+  if(model_specs_main$sample[i] == "2000"){
+    main_indep <- paste0(model_specs_main$indep_var[i], "_01")
+  }else{
+    main_indep <- model_specs_main$indep_var[i]
+  }
+  df_pol$exposure <- df_pol %>% dplyr::pull(main_indep)
+    
+  ## Select correct formula
+  if(grepl("road_density", outcome)){
+    form_str <- sprintf(did_ctr_str_road, outcome)
+  }else if(grepl("minmax", outcome) & grepl("_hc", outcome)){
+    form_str <- sprintf(did_ctr_str_hc, outcome)
+  } else{
+    form_str <- sprintf(did_ctr_str_school, outcome)
+  }
+    
+  ## Run model
+  if(nearest_camp_distance != "full"){
+    df_mod <- df_pol %>% dplyr::filter(min_distance_01 < nearest_camp_distance)
+  }else{
+    df_mod <- df_pol
+  }
+  
+  model_out <- felm(
+    as.formula(form_str), 
+    data = df_mod,
+    cmethod = "reghdfe"
+  )
+  
+  # Get difference in coefficients
+  if(grepl("minmax", outcome) & grepl("_hc", outcome)){
+    diff1611 <- coef(model_out)['I((year == \"2016\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se1611 <- sqrt(
+      vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                      'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2011\") * exposure)']
+      )
+    model_out[["diff_coef1611"]] <- data.frame(diff = diff1611, se = se1611)
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    model_out[["diff_coef2011"]] <- data.frame(diff = NA, se = NA)
+  } else if(any(names(coef(model_out)) == "I((year == \"2011\") * exposure)")){
+    # difference between 2016 and 2011
+    diff1611 <- coef(model_out)['I((year == \"2016\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se1611 <- sqrt(
+      vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                      'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2011\") * exposure)']
+      )
+    model_out[["diff_coef1611"]] <- data.frame(diff = diff1611, se = se1611)
+    
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2016\") * exposure)']
+      )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    
+    # difference between 2020 and 2011
+    diff2011 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se2011 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                      'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2011\") * exposure)']
+      )
+    model_out[["diff_coef2011"]] <- data.frame(diff = diff2011, se = se2011)
+  }else{
+    # This is for road
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2016\") * exposure)']
+      )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    model_out[["diff_coef1611"]] <- data.frame(diff = NA, se = NA)
+    model_out[["diff_coef2011"]] <- data.frame(diff = NA, se = NA)
+  }
+  
+  # Store summary of other model for informal benchmarking
+  f.dx <- as.character(model_out$formula)
+  if(grepl("minmax", outcome) & grepl("_hc", outcome)){
+    f.dx <- gsub(paste("I((year == \"2016\") * exposure)", "+"), "", f.dx, fixed = TRUE)
+    f.dx <- gsub(".*?~", paste0("I((year == \"2016\") * exposure)", "~"), f.dx)
+    model_out[["sensemakr_param"]] <- "I((year == \"2016\") * exposure)"
+    model_out[["benchmark_param"]] <- "I(unemployment_rate_census2002 * (year == \"2016\"))"
+  }else{
+    f.dx <- gsub(paste("I((year == \"2020\") * exposure)", "+"), "", f.dx, fixed = TRUE)
+    f.dx <- gsub(".*?~", paste0("I((year == \"2020\") * exposure)", "~"), f.dx)
+    model_out[["sensemakr_param"]] <- "I((year == \"2020\") * exposure)"
+    model_out[["benchmark_param"]] <- "I(unemployment_rate_census2002 * (year == \"2020\"))"
+  }
+  model_out_dx <- felm(
+    as.formula(f.dx),
+    data = df_mod,
+    cmethod = "reghdfe"
+  )
+  model_out[["dx.sens"]] <- model_out_dx
+    
+  return(model_out)
+
+}
+
+model_specs_main <- model_specs_main %>%
+  mutate(
+    distance_to_camp = coalesce(
+      as.character(model_specs_main$distance_to_camp),
+      "All"),
+    indep_var = case_when(indep_var == "nearest_exposure"~"Nearest",
+                          indep_var == "nearest_exposure_plus_20"~"Nearest + 20km",
+                          indep_var == "nearest_exposure_plus_50"~"Nearest + 50km",
+                          indep_var == "nearest_exposure_plus_100"~"Nearest + 100km")
+  )
+
+# Extract difference + standard error
+diffs_vec1611 <- map_dbl(run_all_models_main, ~.x[["diff_coef1611"]]$diff)
+sediffs_vec1611 <- map_dbl(run_all_models_main, ~.x[["diff_coef1611"]]$se)
+
+diffs_vec2011 <- map_dbl(run_all_models_main, ~.x[["diff_coef2011"]]$diff)
+sediffs_vec2011 <- map_dbl(run_all_models_main, ~.x[["diff_coef2011"]]$se)
+
+diffs_vec2016 <- map_dbl(run_all_models_main, ~.x[["diff_coef2016"]]$diff)
+sediffs_vec2016 <- map_dbl(run_all_models_main, ~.x[["diff_coef2016"]]$se)
+
+@
+
+<<util-analysis, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+# Set up controls
+control_list = c("age","live_urban","wealth_score","higher_education")
+
+years <- c("(year == '2011')", "(year == '2016')")
+ctr_grid <- expand.grid(control = control_list, year = years)
+ctr_grid$full_var <- paste0("I(", ctr_grid$control, "*", ctr_grid$year, ")")
+controls_spec2 <- paste0(ctr_grid$full_var, collapse = "+")
+
+did_spec2 = paste0("%s ~ exposure + I((year == '2011')*exposure) + I((year == '2016')*exposure)+", controls_spec2, " | region + year | 0 | 0")
+
+# Grid over measures
+model_specs2 <- expand.grid(
+  sample = c("all"),
+  outcomes = c("utilization_child", "utilization_women", "utilization"),
+  indep_var = c("nearest_exposure","nearest_exposure_plus_20",
+             "nearest_exposure_plus_50"),
+  distance_to_camp = c(100, 150, 200, NA),
+  stringsAsFactors = FALSE
+)
+
+#### Run all models
+registerDoMC(detectCores() - 1)
+run_all_models_spec2 = foreach(i = 1:nrow(model_specs2)) %do% {
+  
+  ## Select outcome
+  outcome = model_specs2$outcomes[i]
+  
+  ## Select distance
+  nearest_camp_distance = model_specs2$distance_to_camp[i]
+  if(is.na(nearest_camp_distance)){nearest_camp_distance ="full"}
+  
+  ## Select main indep var
+  indep = model_specs2$indep_var[i]
+  
+  ## Select correct formula
+  form_str = sprintf(did_spec2, outcome)
+  
+  ## Select correct dataset
+  if(nearest_camp_distance != "full"){
+    df_mod = df_util %>% dplyr::filter(min_distance < nearest_camp_distance)
+  }else{df_mod = df_util}
+  
+  ## Drop na
+  df_mod = df_mod %>% drop_na(outcome)
+  df_mod$exposure = df_mod %>% dplyr::pull(indep)
+  
+  model_out = felm(as.formula(form_str), data = df_mod, cmethod = "reghdfe")
+  
+  # Get difference in coefficients
+  if(any(names(coef(model_out)) == "I((year == \"2011\") * exposure)")){
+    diff <- coef(model_out)['I((year == \"2016\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se <- sqrt(
+      vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                      'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2016\") * exposure)',
+                          'I((year == \"2011\") * exposure)']
+      )
+    model_out[["diff_coef"]] <- data.frame(diff = diff, se = se)
+  }else{
+    model_out[["diff_coef"]] <- data.frame(diff = NA, se = NA)
+  }
+  
+  return(model_out)
+}
+
+
+### We only need the regression table for spec3
+cmap_exposure <- list('exposure' = "Refugee Presence",
+             'I((year == "2011") * exposure)' = "Refugee Presence x 2011",
+             'I((year == "2016") * exposure)' = "Refugee Presence x 2016")
+
+cmap_both<- list('exposure' = "Access / Presence",
+             'I((year == "2011") * exposure)' = "Access / Presence x 2011",
+             'I((year == "2016") * exposure)' = "Access / Presence x 2016")
+
+# Extract difference + standard error
+diffs_vec <- map_dbl(run_all_models_spec2, ~.x[["diff_coef"]]$diff)
+sediffs_vec <- map_dbl(run_all_models_spec2, ~.x[["diff_coef"]]$se)
+
+model_specs2 <- model_specs2 %>%
+  mutate(
+    distance_to_camp = coalesce(
+      as.character(model_specs2$distance_to_camp),
+      "All"),
+    indep_var = case_when(indep_var == "nearest_exposure"~"Nearest",
+                          indep_var == "nearest_exposure_plus_20"~"Nearest + 20km",
+                          indep_var == "nearest_exposure_plus_50"~"Nearest + 50km",
+                          indep_var == "nearest_exposure_plus_100"~"Nearest + 100km")
+  )
+
+@
+
+<<development_plot, eval = TRUE, echo = FALSE, tidy=TRUE, fig.pos = 'H', fig.width = 9, fig.height = 8, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="Effect of refugee presence on local development and public goods provision. Parishes with higher levels of refugee presence experience improvements across development outcomes, including the index. The results are from OLS DiD models for parishes within 150km of any refuge settlement, interacting Nearest + 20km Refugee Presence (time varying) with year, interacting controls with year, including parish and region-year fixed effects. Standard errors are clustered at the parish level. Estimates include 95$\\%$ CIs.">>=
+
+## Get tidy output for plot
+inds <- which(model_specs_main$outcome %in% c("public_primary_schools_per_thousand_kids_parish_level",
+                                              "public_per_thousand_kid",
+                                              "minmax_count_pop_hcii_standardized",
+                                              "multiply4_minmax_hciii_standardized", 
+                                              "multiply4_minmax_hciv_standardized",
+                                              "multiply4_minmax_hcv_standardized",
+                                              "road_density_standardized",
+                                              "PGindex_mean") & model_specs_main$sample == "all" &
+                model_specs_main$indep_var == "Nearest + 20km" & 
+                model_specs_main$distance_to_camp == 150)
+
+
+run_all_models_main_plot <- map_dfr(inds, function(x){
+  tidy(run_all_models_main[[x]], conf.int = TRUE) %>%
+    filter(grepl("exposure", term)) %>%
+    mutate(outcome = model_specs_main$outcome[x])
+})
+
+ind_dev_plot <- which(model_specs2$outcomes == "utilization" & 
+                        model_specs2$indep_var == "Nearest + 20km" & 
+                        model_specs2$distance_to_camp == 150)
+
+pd <- position_dodge(.4)
+
+df_development <- run_all_models_main_plot %>%
+  filter(outcome %in% c(
+    "public_primary_schools_per_thousand_kids_parish_level",
+    "public_per_thousand_kid",
+    "road_density_standardized",
+    "minmax_count_pop_hcii_standardized",
+    "multiply4_minmax_hciii_standardized",
+    "multiply4_minmax_hciv_standardized", 
+    "multiply4_minmax_hcv_standardized",
+    "PGindex_mean"
+    )) %>%
+  bind_rows(
+    run_all_models_spec2[[ind_dev_plot]] %>% 
+      tidy(conf.int = TRUE) %>%
+      filter(grepl("exposure", term)) %>%
+      mutate(outcome = "Health Utilization")
+  ) %>%
+  mutate(
+    term = case_when(
+      term == "exposure"~"Baseline Presence",
+      term == 'I((year == \"2006\") * exposure)'~"Pres x 2006",
+      term == 'I((year == \"2011\") * exposure)'~"Pres x 2011",
+      term == 'I((year == \"2016\") * exposure)'~"Pres x 2016",
+      term == 'I((year == \"2020\") * exposure)'~"Pres x 2020"
+    ),
+    term = as.factor(term),
+    term = fct_relevel(term, "Baseline Presence", 
+                       "Pres x 2006",
+                       "Pres x 2011",
+                       "Pres x 2016",
+                       "Pres x 2020"),
+    outcome = case_when(
+      outcome == "public_primary_schools_per_thousand_kids_parish_level"~"Public Pri School Access",
+      outcome == "public_per_thousand_kid"~"Public Sec School Access",
+      outcome == "road_density_standardized"~"Road Density",
+      outcome == "PGindex_mean"~"Public Goods Index",
+      outcome == "minmax_count_pop_hcii_standardized"~"HC 2 (Clinic)", 
+      outcome == "multiply4_minmax_hciii_standardized"~"HC 3 (Subcounty)", 
+      outcome == "multiply4_minmax_hciv_standardized"~"HC 4 (County)", 
+      outcome == "multiply4_minmax_hcv_standardized"~"HC 5 (Hospital)",
+      TRUE~outcome
+      ),
+    outcome = as.factor(outcome),
+     outcome = fct_relevel(outcome, 
+                          "Public Pri School Access",
+                          "Public Sec School Access",
+                          "HC 2 (Clinic)", 
+                          "HC 3 (Subcounty)", 
+                          "HC 4 (County)", 
+                          "HC 5 (Hospital)",
+                          "Health Utilization",
+                          "Road Density", 
+                          "Public Goods Index")
+  )
+
+# make plot
+df_development_plot <- df_development %>%
+  #filter(!grepl("School Access", outcome)) %>%
+  ggplot(aes(term, estimate)) + 
+  geom_hline(aes(yintercept = 0), lty = "dashed", colour = "black", alpha = .6) + 
+  geom_vline(aes(xintercept = 1.5), lty = "dashed", colour = "black", alpha = .6) + 
+  geom_point(colour = "#ba0000") + 
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high), 
+    width = 0, position = pd, lwd = .7, colour = "#ba0000"
+  ) + 
+  #geom_label(aes(label = round(estimate, 3)), colour = "#ba0000") +
+  geom_text(aes(x = term, y = conf.high + (abs(conf.high)/5), label = round(estimate, 3)), colour = "#ba0000") +
+  facet_wrap(~outcome, scales = "free", ncol = 3) +
+  scale_x_discrete(
+    labels = function(x)str_wrap(str_replace_all(x, "foo" , " "), width = 10)
+  ) + 
+  #scale_y_continuous(breaks = c(-.15,-.1,-.05,0,.05,.1,.15,.2)) +
+  labs(y = "Estimate") + 
+  theme_bw() + 
+  theme(axis.title.x = element_blank(),
+                axis.text.x = element_text(size = 7))
+
+# plot
+df_development_plot 
+
+@
+
+<<table_development, eval = FALSE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+cmap_did_dev <- list(
+   'exposure' = "Baseline Presence",
+  'I((year == "2006") * exposure)' = "Presence x 2006", 
+  'I((year == "2011") * exposure)' = "Presence x 2011", 
+  'I((year == "2016") * exposure)' = "Presence x 2016",
+  'I((year == "2020") * exposure)' = "Presence x 2020"
+)
+
+## Reorder model_specs main
+outcome_order <- c(
+    "public_primary_schools_per_thousand_kids_parish_level",
+    "private_primary_schools_per_thousand_kids_parish_level",
+    "public_per_thousand_kid",
+    "private_per_thousand_kid",
+    "road_density_standardized",
+    "health_access_index4")
+
+## Inds for DID
+inds_dev150 <- which(
+  model_specs_main$sample == "all" & 
+    model_specs_main$outcome %in% outcome_order &
+    model_specs_main$indep_var == "Nearest + 20km" &
+    model_specs_main$distance_to_camp == 150
+)
+inds_util150 <- which(
+  model_specs2$sample == "all" & 
+    model_specs2$outcome == "utilization" &
+    model_specs2$indep_var == "Nearest + 20km" &
+    model_specs2$distance_to_camp == 150
+)
+
+inds_dev150 <- inds_dev150[match(outcome_order, model_specs_main$outcome[inds_dev150])]
+
+## Create table
+print(texreg(
+  c(run_all_models_main[inds_dev150], run_all_models_spec2[inds_util150]),
+  custom.coef.map = cmap_did_dev,
+   custom.model.names = 
+     c("Public Pri",
+       "Private Pri",
+       "Public Sec",
+       "Private Sec",
+       "Road Density",
+       "Health Access",
+       "Health Util"),
+  custom.gof.rows = list(
+    #"Model" = c(rep("DiD", length(inds_dev150))),
+    "Diff 2016-2011" = c(diffs_vec1611[inds_dev150], diffs_vec2[inds_util150]),
+    "SE Diff 2016-2011" = c(sediffs_vec1611[inds_dev150], sediffs_vec2[inds_util150]),
+    "Diff 2020-2016" = c(diffs_vec2016[inds_dev150], NA),
+    "SE Diff 2020-2016" = c(sediffs_vec2016[inds_dev150], NA),
+    "Presence Measure" = c(rep("N+20km", length(inds_dev150)+1)),
+    "Sample Distance (km)" = c(model_specs_main$distance_to_camp[inds_dev150], model_specs2$distance_to_camp[inds_util150]),
+    "Controls x Year" = rep("Yes", length(inds_dev150)+1)
+    #"F-Statistic" = c(NA, NA, NA, NA, fstat_vec_ab[inds_iv])
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+  caption = "Regression table for Development Outcomes: OLS difference-in-differences models for parishes within 150km of any refuge settlement, interacting Nearest + 20km Refugee Presence (time-varying) with year, interacting demographic controls with year, and including year and regional fixed effects. Standard errors clustered at the parish level.",
+  label = "tab:dev",
+  use.packages = FALSE,
+  scalebox='0.79',
+  float.pos = "t")
+)
+
+@
+%\vspace{-.5cm}
+
+
+The first two plots show the results for primary and secondary school access (the number of schools normalized by school-age children).  
+It shows that in 2001, a 1-SD increase in refugee presence was associated with slightly less access to \textit{public primary schools} 
+(\Sexpr{df_development[df_development$outcome == "Public Pri School Access" & df_development$term == "Baseline Presence",]$estimate}
+schools per 1000 primary school-age kids), but this negative association is not statistically distinguishable from 0. 
+Parishes with a higher level of exposure to refugees begin witnessing greater access to public schooling starting in 2006 with an effect size of
+\Sexpr{df_development[df_development$outcome == "Public Pri School Access" & df_development$term == "Pres x 2006",]$estimate}, and this positive effect increases in all subsequent years:
+\Sexpr{df_development[df_development$outcome == "Public Pri School Access" & df_development$term == "Pres x 2011",]$estimate} in 2011, 
+\Sexpr{df_development[df_development$outcome == "Public Pri School Access" & df_development$term == "Pres x 2016",]$estimate} in 2016, and
+\Sexpr{df_development[df_development$outcome == "Public Pri School Access" & df_development$term == "Pres x 2020",]$estimate} in 2020. As expected, we observe positive effects starting in the 2000s, when Uganda's refugee-hosting policies emphasized self-sufficiency for refugees and benefits for hosting communities. Strikingly, the largest effects are after 2014, when large numbers of South Sudanese refugees began to arrive followed by an increase in humanitarian aid disbursements.
+
+Turning to secondary schools, we find a similar pattern to primary schools. In the baseline year of 2001, areas with higher levels of refugee presence had, on average, worse access to \textit{public secondary schools} 
+(\Sexpr{df_development[df_development$outcome == "Public Pri School Access" & df_development$term == "Baseline Presence",]$estimate} schools per 1000 secondary school-age kids). Then in subsequent years compared to baseline, these areas saw improvements in public secondary school access particularly in 2020. This suggests that while in the past refugee-hosting areas were under-serviced peripheral areas, a significant increase in access to primary and secondary public schools followed the massive arrival of South Sudanese refugees. 
+SI Section \ref{SIsec:edu_yearly} shows results of these models for public primary and secondary school access using yearly data of schools and refugee presence. Results are substantively similar. 
+
+The next four plots display the effects for health access, which measures parishes' proximity to health facilities normalized by the population served for each type of facility. 
+Importantly, for the key health facilities, HC-3 (subcounty-level outpatient clinics) and HC-4 (county-level inpatient facilities), refugee presence was associated with worse access at baseline, and correspondingly, with significantly lower health utilization. 
+We find that compared to baseline, health access to HC-3 and HC-4s improved for more exposed parishes starting in 2006. For example, with HC-3s, which are subcounty clinics, the effect of refugee presence in 2006 compared to baseline was 
+\Sexpr{df_development[df_development$outcome == "HC 3 (Subcounty)" & df_development$term == "Pres x 2006",]$estimate} sd, and continued to improve in 2011 
+(\Sexpr{df_development[df_development$outcome == "HC 3 (Subcounty)" & df_development$term == "Pres x 2011",]$estimate} sd) and 2016
+(\Sexpr{df_development[df_development$outcome == "HC 3 (Subcounty)" & df_development$term == "Pres x 2016",]$estimate} sd). Since HC-2 and HC-3 are substitutes, it is not surprising that we find that greater access to the more resourceful HC-3 is associated with lower access to HC-2 (small outpatient clinics). While we see negative effects for HC-5s (regional hospitals), it's worth mentioning that they are rare in Uganda. Hospital access, which is a function of distance and the size of the population served, gets worse in refugee hosting areas because their population growth outpaces the very slow rate of hospital construction. In sum, following Uganda's inclusive refugees hosting reforms, and even after the large influx of refugees in 2014, greater refugee presence is associated with relatively better health access and utilization. 
+
+Starting on the bottom row, health utilization (the average measure across child and maternal health outcomes sampled by the DHS) also improved for more exposed parishes starting in 2011
+(\Sexpr{df_development[df_development$outcome == "Health Utilization" & df_development$term == "Pres x 2011",]$estimate} sd) and continued in 2016 
+(\Sexpr{df_development[df_development$outcome == "Health Utilization" & df_development$term == "Pres x 2016",]$estimate} sd). 
+
+The second plot on the bottom row displays the results for road density (density within each parish-year weighted by road quality type). In the baseline year of 2011, refugee presence was positively associated with road density but not statistically indistinguishable from 0. But, we observe positive and statistically significant changes starting in 2016 
+(\Sexpr{df_development[df_development$outcome == "Road Density" & df_development$term == "Pres x 2016",]$estimate} sd) and continuing to 2020 
+(\Sexpr{df_development[df_development$outcome == "Road Density" & df_development$term == "Pres x 2020",]$estimate} sd).
+
+The last plot of Figure \ref{fig:development_plot} shows the effects for our public goods index measure (average across public schools, road density, and health centers access measures). It shows that at baseline year of 2001, a 1-SD increase in refugee presence was associated with lower public goods access 
+(\Sexpr{df_development[df_development$outcome == "Public Goods Index" & df_development$term == "Baseline Presence",]$estimate} sd). However, in subsequent years, the changes in this effect were positive and statistically significant: 
+\Sexpr{df_development[df_development$outcome == "Public Goods Index" & df_development$term == "Pres x 2006",]$estimate} sd  in 2006, 
+\Sexpr{df_development[df_development$outcome == "Public Goods Index" & df_development$term == "Pres x 2011",]$estimate} sd in 2011, 
+\Sexpr{df_development[df_development$outcome == "Public Goods Index" & df_development$term == "Pres x 2016",]$estimate} sd in 2016, and
+\Sexpr{df_development[df_development$outcome == "Public Goods Index" & df_development$term == "Pres x 2020",]$estimate} sd in 2020.
+
+We stress here that since parishes with greater refugee presence had worse public goods provision at baseline, which we also confirmed in Figure \ref{fig:distlevel_development}, it is unlikely that refugees selected into settling in these areas for access to better public goods. 
+
+
+\subsection{Refugee Presence Does Not Lead to Backlash}
+
+Our second set of outcomes proxy for a possible citizen backlash. Figure~\ref{fig:acled_ab_plot} examines how refugees' presence affects public opinion and insecurity. Recall that all Afrobarometer outcomes are standardized to have a mean of 0 and an SD of 1, whereas the ACLED outcome of \textit{any violent event} is binary (0 or 1). The top row of Figure~\ref{fig:acled_ab_plot} focuses on attitudes towards migrants and migration policy; \textit{higher values} indicate being more \textit{pro-migrant}. 
+
+When asked in Afrobarometer Round 6 about support for migrants' free movement across borders (as opposed to restricting cross-border movement to protect own citizens), plot 1 shows that Ugandans experiencing greater presence of refugees responded no differently to those experiencing less. Plot 2 shows that, compared to 2011, Ugandan citizens with a higher level of exposure to refugees are no more or less welcoming of migrants than Ugandans living in parishes with lower levels of refugee presence after 2014.
+
+%[AB ACLED figure showing no backlash]
+<<run_models_ab, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+## -------------------------------------------------
+## All possible specifications - non-health outcomes
+## -------------------------------------------------
+
+## formulas
+did_ctr_str_ab <- paste0("%s ~ exposure + I((year == '2006')*exposure) + I((year == '2011')*exposure) + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_ab_full, " | region + year | 0 | 0")
+did_ctr_str_ab_migattitude <- paste0("%s ~ exposure + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_ab_migattitude, " | region + year | 0 | 0")
+did_ctr_str_ab_migmovement <- paste0("%s ~ exposure + I((year == '2020')*exposure) +", controls_ab_migmovement, " | region + year | 0 | 0")
+did_crt_str_ab_road <- paste0("%s ~ exposure + I((year == '2011')*exposure) + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_ab_road, " | region + year | 0 | 0")
+cs_ctr_str_ab <- paste0("%s ~ exposure +", controls_ab_cs, " | region | 0 | 0")
+
+model_specs_ab <- expand.grid(
+  sample = c("all"),
+  outcome = c(
+    "migrants_attitude_standardized",
+    "migrants_movement_standardized",
+    "feel_unsafe_standardized",
+    "feared_crime_standardized",
+    "presidential_approval_standardized",
+    "partisanship_nrm_standardized", 
+    "trust_president_standardized", 
+    "trust_rulling_party_standardized",
+    "born_non_ugandans_standardized",
+    "foreigner_residents_standardized",
+    "wealth_index", 
+    "gvmt_perf_index",
+    "improve_education",
+    "improve_road", 
+    "improve_health"
+  ),
+  indep_var = c("nearest_exposure", "nearest_exposure_plus_20", 
+                "nearest_exposure_plus_50"),
+  distance_to_camp = c(100, 150, 200, NA),
+  stringsAsFactors = FALSE
+)
+
+# migrant attitude - 2011, 2016, 2020
+# migrant movement - 2016, 2020
+# feel unsafe - 2011, 2016, 2020
+# feared crime - all 5
+# presidential approval - all 5
+# partisanship nrm - all 5
+# trust president - all 5
+# trust ruing paryt - all 5
+# wealth index all 5
+# gov performance all 5
+# born non ugandan - 2011
+# foreigner residents - 2011
+# improve roads - 2006, 2011, 2016, 2020
+# improve health - all 5
+# improve education - all 5
+
+#registerDoMC(detectCores() - 1)
+#registerDoMC(detectCores() - 1)
+run_all_models_ab <- foreach(i = 1:nrow(model_specs_ab)) %do% {
+  
+  ## Select outcome
+  outcome <- model_specs_ab$outcome[i]
+    
+  ## Select distance
+  nearest_camp_distance <- model_specs_ab$distance_to_camp[i]
+  if(is.na(nearest_camp_distance)){
+    nearest_camp_distance <- "full"
+  }
+    
+  ## Select main iv
+  main_indep <- model_specs_ab$indep_var[i]
+  df_ab$exposure <- df_ab %>% dplyr::pull(main_indep)
+    
+  ## Select correct formula
+  if(outcome %in% c("migrants_attitude_standardized", "feel_unsafe_standardized")){
+    form_str <- sprintf(did_ctr_str_ab_migattitude, outcome)
+  }else if(outcome == "migrants_movement_standardized"){
+    form_str <- sprintf(did_ctr_str_ab_migmovement, outcome)
+  }else if(outcome %in% c("born_non_ugandans_standardized",
+                          "foreigner_residents_standardized")){
+    form_str <- sprintf(cs_ctr_str_ab, outcome)
+  }else if(outcome == "improve_road"){
+    form_str <- sprintf(did_crt_str_ab_road, outcome)
+  }else{
+    form_str <- sprintf(did_ctr_str_ab, outcome) 
+  }
+ 
+  ## Run model
+  if(nearest_camp_distance != "full"){
+    df_mod <- df_ab %>% dplyr::filter(min_distance < nearest_camp_distance)
+  }else{
+    df_mod <- df_ab
+  }
+  model_out <- felm(
+    as.formula(form_str), 
+    data = df_mod,
+    cmethod = "reghdfe"
+  )
+  
+  # Get difference in coefficients
+  if(any(names(coef(model_out)) == "I((year == \"2011\") * exposure)")){
+    # difference between 2016 and 2011
+    diff1611 <- coef(model_out)['I((year == \"2016\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se1611 <- sqrt(
+      vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                      'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2016\") * exposure)',
+                          'I((year == \"2011\") * exposure)']
+      )
+    model_out[["diff_coef1611"]] <- data.frame(diff = diff1611, se = se1611)
+    
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                        'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2016\") * exposure)']
+    )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+
+    # difference between 2020 and 2011
+    diff2011 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se2011 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                        'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2011\") * exposure)']
+    )
+    model_out[["diff_coef2011"]] <- data.frame(diff = diff2011, se = se2011)
+  }else if(any(names(coef(model_out)) == "I((year == \"2016\") * exposure)")){
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                        'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2016\") * exposure)']
+    )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    model_out[["diff_coef1611"]] <- data.frame(diff = NA, se = NA)
+    model_out[["diff_coef2011"]] <- data.frame(diff = NA, se = NA)
+  }else{
+    model_out[["diff_coef2016"]] <- data.frame(diff = NA, se = NA)
+    model_out[["diff_coef1611"]] <- data.frame(diff = NA, se = NA)
+    model_out[["diff_coef2011"]] <- data.frame(diff = NA, se = NA)
+  }
+    
+  return(model_out)
+
+}
+
+model_specs_ab <- model_specs_ab %>%
+  mutate(
+    distance_to_camp = coalesce(
+      as.character(model_specs_ab$distance_to_camp),
+      "All"),
+    indep_var = case_when(indep_var == "nearest_exposure"~"Nearest",
+                          indep_var == "nearest_exposure_plus_20"~"Nearest + 20km",
+                          indep_var == "nearest_exposure_plus_50"~"Nearest + 50km",
+                          indep_var == "nearest_exposure_plus_100"~"Nearest + 100km")
+  )
+
+# Extract difference + standard error
+diffs_vec1611 <- map_dbl(run_all_models_ab, ~.x[["diff_coef1611"]]$diff)
+sediffs_vec1611 <- map_dbl(run_all_models_ab, ~.x[["diff_coef1611"]]$se)
+
+diffs_vec2011 <- map_dbl(run_all_models_ab, ~.x[["diff_coef2011"]]$diff)
+sediffs_vec2011 <- map_dbl(run_all_models_ab, ~.x[["diff_coef2011"]]$se)
+
+diffs_vec2016 <- map_dbl(run_all_models_ab, ~.x[["diff_coef2016"]]$diff)
+sediffs_vec2016 <- map_dbl(run_all_models_ab, ~.x[["diff_coef2016"]]$se)
+
+@
+
+<<run_models_acled, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+## -------------------------------------------------
+## All possible specifications - non-health outcomes
+## -------------------------------------------------
+
+## formulas
+did_ctr_str <- paste0("%s ~ exposure + I((year == '2006')*exposure) + I((year == '2011')*exposure) + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls, " | parish_id + region_year | 0 | parish_id")
+
+model_specs_acled <- expand.grid(
+  sample = c("all"),
+  outcome = c("any_violent_event"),
+  indep_var = c("nearest_exposure", "nearest_exposure_plus_20", 
+                "nearest_exposure_plus_50"),
+  distance_to_camp = c(100, 150, 200, NA),
+  stringsAsFactors = FALSE
+)
+
+#registerDoMC(detectCores() - 1)
+run_all_models_acled <- foreach(i = 1:nrow(model_specs_acled)) %do% {
+  
+  ## Select outcome
+  outcome <- model_specs_acled$outcome[i]
+    
+  ## Select distance
+  nearest_camp_distance <- model_specs_acled$distance_to_camp[i]
+  if(is.na(nearest_camp_distance)){
+    nearest_camp_distance <- "full"
+  }
+    
+  ## Select main iv
+  if(model_specs_acled$sample[i] == "2000"){
+    main_indep <- paste0(model_specs_acled$indep_var[i], "_01")
+  }else{
+    main_indep <- model_specs_acled$indep_var[i]
+  }
+  df_pol$exposure <- df_pol %>% dplyr::pull(main_indep)
+    
+  ## Select correct formula
+  if(grepl("health_access_", outcome)){
+   form_str <- sprintf(did_ctr_str_health, outcome) 
+  }else if(grepl("road_density", outcome)){
+    form_str <- sprintf(did_ctr_str_road, outcome)
+  }else if(grepl("wealth_index_standardized", outcome)){
+    form_str <- sprintf(did_ctr_str_wealth, outcome)
+  }else{
+   form_str <- sprintf(did_ctr_str, outcome) 
+  }
+    
+  ## Run model
+  if(nearest_camp_distance != "full"){
+    df_mod <- df_pol %>% dplyr::filter(min_distance_01 < nearest_camp_distance)
+  }else{
+    df_mod <- df_pol
+  }
+  
+  if(grepl("wealth_index_standardized", outcome)){
+    df_mod <- df_mod %>% filter(year %in% c("2001", "2011"))
+  }
+  model_out <- felm(
+    as.formula(form_str), 
+    data = df_mod,
+    cmethod = "reghdfe"
+  )
+  
+  # Get difference in coefficients
+  if(any(names(coef(model_out)) == "I((year == \"2011\") * exposure)")){
+    # difference between 2016 and 2011
+    diff1611 <- coef(model_out)['I((year == \"2016\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se1611 <- sqrt(
+      vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                        'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2016\") * exposure)',
+                          'I((year == \"2011\") * exposure)']
+    )
+    model_out[["diff_coef1611"]] <- data.frame(diff = diff1611, se = se1611)
+    
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                        'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2016\") * exposure)']
+    )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    
+    # difference between 2020 and 2011
+    diff2011 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se2011 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                        'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2011\") * exposure)']
+    )
+    model_out[["diff_coef2011"]] <- data.frame(diff = diff2011, se = se2011)
+  }else{
+    # This is for road
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                        'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2016\") * exposure)']
+    )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    model_out[["diff_coef1611"]] <- data.frame(diff = NA, se = NA)
+    model_out[["diff_coef2011"]] <- data.frame(diff = NA, se = NA)
+  }
+
+    
+  return(model_out)
+
+}
+
+model_specs_acled <- model_specs_acled %>%
+  mutate(
+    distance_to_camp = coalesce(
+      as.character(model_specs_acled$distance_to_camp),
+      "All"),
+    indep_var = case_when(indep_var == "nearest_exposure"~"Nearest",
+                          indep_var == "nearest_exposure_plus_20"~"Nearest + 20km",
+                          indep_var == "nearest_exposure_plus_50"~"Nearest + 50km",
+                          indep_var == "nearest_exposure_plus_100"~"Nearest + 100km")
+  )
+
+# Extract difference + standard error
+diffs_vec1611 <- map_dbl(run_all_models_acled, ~.x[["diff_coef1611"]]$diff)
+sediffs_vec1611 <- map_dbl(run_all_models_acled, ~.x[["diff_coef1611"]]$se)
+
+diffs_vec2011 <- map_dbl(run_all_models_acled, ~.x[["diff_coef2011"]]$diff)
+sediffs_vec2011 <- map_dbl(run_all_models_acled, ~.x[["diff_coef2011"]]$se)
+
+diffs_vec2016 <- map_dbl(run_all_models_acled, ~.x[["diff_coef2016"]]$diff)
+sediffs_vec2016 <- map_dbl(run_all_models_acled, ~.x[["diff_coef2016"]]$se)
+
+
+@
+
+<<acled_ab_plot, eval = TRUE, echo = FALSE, tidy=TRUE, fig.pos = 'H', fig.width = 10, fig.height = 6.5, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="Effect of refugee presence on public opinion and insecurity. The figure shows that a greater refugee presence does not lead to backlash against migrants, but does increase fears of crime (Afrobarometer), although there is no actual increased likelihood of violence (ACLED). OLS models for Afrobarometer respondents within 150km with Nearest + 20km exposure measure interacting demographic controls with year, including parish and region-year fixed effects. For ACLED, standard errors are clustered at the parish level. Estimates include 95$\\%$ CIs.">>=
+
+## Get tidy output for plot
+inds <- which(model_specs_ab$indep_var == "Nearest + 20km" & model_specs_ab$distance_to_camp == 150)
+run_all_models_ab_plot <- map_dfr(inds, function(x){
+  tidy(run_all_models_ab[[x]], conf.int = TRUE) %>%
+    filter(grepl("exposure", term)) %>%
+    mutate(outcome = model_specs_ab$outcome[x])
+})
+
+inds <- which(model_specs_acled$indep_var == "Nearest + 20km" & model_specs_acled$distance_to_camp == 150)
+run_all_models_acled_plot <- map_dfr(inds, function(x){
+  tidy(run_all_models_acled[[x]], conf.int = TRUE) %>%
+    filter(grepl("exposure", term)) %>%
+    mutate(outcome = model_specs_acled$outcome[x])
+})
+
+## ----
+## Plot
+## ----
+pd <- position_dodge(.4)
+
+run_all_models_acled_ab_plot <- bind_rows(
+  run_all_models_acled_plot,
+  run_all_models_ab_plot
+)
+
+## AB and ACLED outcomes
+df_acled_ab <- run_all_models_acled_ab_plot %>%
+  filter(outcome %in% c("migrants_attitude_standardized",
+                        "migrants_movement_standardized",
+                        "born_non_ugandans_standardized",
+                        "foreigner_residents_standardized",
+                        "feel_unsafe_standardized",
+                        "feared_crime_standardized", 
+                        "any_violent_event")) %>%
+  mutate(
+    term = case_when(
+      term == "exposure"~"Baseline Presence",
+      term == 'I((year == \"2006\") * exposure)'~"Pres x 2006",
+      term == 'I((year == \"2011\") * exposure)'~"Pres x 2011",
+      term == 'I((year == \"2016\") * exposure)'~"Pres x 2016",
+      term == 'I((year == \"2020\") * exposure)'~"Pres x 2020"
+    ),
+    term = as.factor(term),
+    term = fct_relevel(term, "Baseline Presence", 
+                       "Pres x 2006",
+                       "Pres x 2011",
+                       "Pres x 2016",
+                       "Pres x 2020"),
+    outcome = case_when(
+        outcome == "migrants_attitude_standardized"~"Migrants as Neighbors",
+        outcome == "migrants_movement_standardized"~"Migrants can Move Freely",
+        outcome == "born_non_ugandans_standardized"~"Born Non-Ugandan",
+        outcome == "foreigner_residents_standardized"~"Able to Naturalize",
+        outcome == "feel_unsafe_standardized"~"Felt Unsafe in Community",
+        outcome == "feared_crime_standardized"~"Feared Crime",
+        outcome == "any_violent_event"~"Any Violent Event (ACLED)"
+      ),
+      outcome = fct_relevel(outcome, "Migrants can Move Freely",
+                            "Migrants as Neighbors",
+                            "Born Non-Ugandan", 
+                            "Able to Naturalize",
+                            "Felt Unsafe in Community", 
+                            "Feared Crime",
+                            "Any Violent Event (ACLED)")
+  )
+
+gg_ab <- df_acled_ab %>% filter(outcome != "Any Violent Event (ACLED)") %>%
+  ggplot(aes(term, estimate)) + 
+  geom_point(colour = "#ba0000") +
+  geom_hline(aes(yintercept = 0), lty = "dashed", colour = "black", alpha = .6) + 
+  geom_vline(aes(xintercept = 1.5), lty = "dashed", colour = "black", alpha = .6) + 
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high), 
+    width = 0, position = pd, lwd = .7, colour = "#ba0000"
+  ) + 
+  #geom_label(aes(label = round(estimate, 3)), colour = "#ba0000") +
+  geom_text(aes(x = term, y = conf.high + .03, label = round(estimate, 3)), colour = "#ba0000") +
+  facet_wrap(~outcome, scales = "free_x", nrow = 2, ncol = 4) +
+  scale_x_discrete(
+    labels = function(x)str_wrap(str_replace_all(x, "foo" , " "), width = 10)
+  ) + 
+  labs(y = "Estimate") + 
+  theme_bw() + 
+  theme(axis.title.x = element_blank())
+
+gg_acled <- df_acled_ab %>% filter(outcome == "Any Violent Event (ACLED)") %>%
+  ggplot(aes(term, estimate)) + 
+  geom_point(colour = "#ba0000") +
+  geom_hline(aes(yintercept = 0), lty = "dashed", colour = "black", alpha = .6) + 
+  geom_vline(aes(xintercept = 1.5), lty = "dashed", colour = "black", alpha = .6) + 
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high), 
+    width = 0, position = pd, lwd = .7, colour = "#ba0000"
+  ) + 
+  #geom_label(aes(label = round(estimate, 3)), colour = "#ba0000") +
+  geom_text(aes(x = term, y = conf.high + .003, label = round(estimate, 3)), colour = "#ba0000") +
+  facet_wrap(~outcome, scales = "free_x", nrow = 3, ncol = 4) +
+  scale_x_discrete(
+    labels = function(x)str_wrap(str_replace_all(x, "foo" , " "), width = 7)
+  ) + 
+  labs(y = "Estimate") + 
+  theme_bw() + 
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+gg_ab + inset_element(gg_acled,
+                left = .55, bottom = 0, right = 1, top = .5, align_to = 'full')
+
+@
+
+With respect to citizenship policy (plots 3 and 4), which was only included in Afrobarometer Round 5, citizens experiencing greater refugee presence were less supportive of granting citizenship based on birthplace alone, but more supportive of allowing migrants who have lived and worked in Uganda for many years (e.g., refugees) to be eligible for naturalization. Although we control for respondent demographic characteristics as well as their distances to the border, capital, and road, we caution that these results based on cross-sectional variation are suggestive, since citizens who live in refugee-hosting areas are different compared to other citizens on many other variables.
+
+In the bottom row of Figure \ref{fig:acled_ab_plot}, \textit{higher values} correspond to \textit{greater feelings of insecurity} or \textit{greater violence}. More exposed citizens did not say they felt more unsafe in their community post-2014 (plot 1). In 2020, the effect was negative at
+\Sexpr{df_acled_ab[df_acled_ab$outcome == "Felt Unsafe in Community" & df_acled_ab$term == "Pres x 2020",]$estimate} sd, which means that more exposed citizens felt \textit{safer} in 2020 than in 2011.
+
+Compared to the baseline year of 2001, residents were more fearful of crime by 
+\Sexpr{df_acled_ab[df_acled_ab$outcome == "Feared Crime" & df_acled_ab$term == "Pres x 2016",]$estimate} sd in 2016. These fears appear to be unfounded, however, as we find no evidence of changes in actual likelihood of violence in parishes with greater refugee presence. 
+Compared to 2001, a 1-SD increase in refugee presence in 2006 is associated with a
+\Sexpr{df_acled_ab[df_acled_ab$outcome == "Any Violent Event (ACLED)" & df_acled_ab$term == "Pres x 2006",]$estimate*100}
+percentage point \textit{reduction} in likelihood of a violent event. And the effects are null in subsequent years. These findings are in line with our predictions for Uganda; positive spillovers of refugee-hosting may mitigate conflict. 
+
+Nevertheless, as in other contexts, we recognize that out-group members can still elicit fears and increase one's sense of insecurity. %It is unclear from the ACLED dataset, however, whether these violent events involve refugees. 
+It is also possible that ACLED under-reports violent incidences that are not reported by the media. Recent scholarship on the relationship between refugees and violent conflict finds that hosting generally has null effects on conflict \citep{zhoushaver2021}; when conflicts do occur, refugees tend to be the victims \citep{savun2019}. 
+Nevertheless, by 2020, like with Afrobarometer respondents reporting feeling more safe, these fears of crime reverse with a negative effect of \Sexpr{df_acled_ab[df_acled_ab$outcome == "Feared Crime" & df_acled_ab$term == "Pres x 2020",]$estimate} sd.
+
+As we theorize, the positive externalities for local communities (in the form of improved service delivery), generated by Uganda's integrative approach to hosting refugees, generally balance out these fears, which do not generate a backlash against refugees and inclusive migration policies. Improving basic services is of the utmost importance to host communities in developing contexts regardless of who is providing them \citep{sacks2012can}. 
+
+All the results reported here use our main specification of the Nearest + 20km exposure measure (which takes into account not only the nearest settlements, but also all settlements within 20km) and the subset of parishes that are within 150km of a settlement. In SI Section \ref{SIsec:tables}, we present the regression tables for all of the results shown in Figures \ref{fig:development_plot} and \ref{fig:acled_ab_plot}, along with their robustness specifications. These tables display the effects across the alternative measures of exposure (Nearest and Nearest + 50km) and across the alternative radius cutoffs for parishes (within 100km, 200km, and all parishes). These results demonstrate that our main results are robust across specifications. This section also shows that our results are robust to including a district time trend, and in a standard two-period binary DiD specification. Next, in SI Sections \ref{SIsec:sensitivity} and \ref{SIsec:multhypothesis}, we also conduct formal sensitivity analyses and address concerns about multiple hypothesis testing by adjusting for the false discovery rate and showing Benjamini-Hochberg-adjusted p-values.
+
+An alternative explanation is that our results are driven by a change in the composition of host citizens. It is possible that the positive effects we observe are due to the internal migration of Ugandans: those who move to refugee settlement areas may be positively disposed toward refugees, while those who leave are more likely to be anti-migrants. While there is no data to test this possibility directly, in SI Section \ref{SIsec:compositional} we use DHS survey data to demonstrate that rates of both in- and out-migration are no different in refugee-hosting districts vs. neighboring districts that do not host refugees.   
+
+
+\section{Policy and Program Implications}
+\label{sec:implications} 
+
+Using a DiD research design and a newly constructed geocoded panel dataset of the locations of health centers and schools as well as the quality of roads, we find that host communities near refugee settlements in Uganda experience positive spillovers. Our findings with respect to service provision are consistent across three key domains and are robust to models specifications, alternative measures of refugee proximity, and to different samples based on distance to settlements, which increases confidence in our results. 
+
+Through individual-level surveys, we further find little evidence that proximity to refugees causes a backlash within host communities against them or related policies. These results are consistent with findings from other contexts such as Jordan~\citep{Ferguson2021} and the DRC~\citep{Pham2021}. While we cannot directly assess this argument, we maintain that positive spillovers in the form of service delivery improvements likely help reduce tensions between refugees and host communities, and thereby contribute to social cohesion. These findings advance an emerging literature that assesses how the arrival of forcibly displaced people affects host communities, particularly in the goods and labor markets as well as through health channels. Nevertheless, our understanding of the economic impacts of forcibly displaced people on host communities is in its infancy and requires pushing the research agenda forward across many other, particularly low-income, contexts. 
+
+In the absence of mitigating policies, refugees may impose a burden by straining local social services and infrastructure. The unequal provision of humanitarian aid to refugees might also provoke resentment \citep{jacobsen2005, dryden2004remaining}. However, aid and infrastructural development targeted primarily at refugees can generate positive externalities for local host communities if access is open to all \citep{maystadt2014}. To prevent tensions from developing, some agencies also offer assistance to local citizens, given that refugee sites are often located in marginalized areas \citep{sanghi2016}. Refugees can also directly contribute physical, social, and human capital to local economies by creating businesses~\citep{taylor2016economic}, and by using aid to purchase local goods and services~\citep{lehmann2020does}. Thus the effects of refugees on host communities are not uniform~\citep{maystadt2019impacts}, but understanding the interaction between hosting policies and local contexts is integral to the study of levels of social cohesion between migrants and host communities \citep{BettsWB2021,Aksoy2021}.
+
+We focus here on service delivery---a policy domain for which government and aid organizations are directly responsible. Determining the broader impact of refugees' presence on welfare would require examining additional outcomes such as land pressure, potential environmental degradation, labor and housing markets, trade, and food and other commodity prices. While most studies focus on a single sector, we provide evidence on multiple sectors---education (primary and secondary access), health (access and utilization), and road infrastructure. 
+
+Given the large number of refugees in Uganda and its inclusive hosting framework, Uganda offers an important lesson. This research contributes to scholars' and practitioners' understanding of how hosting policies and development investments can address possible local grievances and thereby improve the relationship between host communities and refugees. Our findings ultimately support the approach recommended by UNHCR's 2018 Global Compact on Refugees, which calls for easing the pressures of local hosting communities by meeting and supporting their needs alongside those of refugees. We go further to examine the implications for host citizens' reception of refugees. Host governments and humanitarian agencies may be reluctant to allow refugees to self-settle and access local public goods and services for fear of conflict and public backlash. Our findings on public opinion and violence show that such outcome is not a foregone conclusion, and that governments have the tools to manage the delicate process of hosting refuges in ways that are beneficial to all.
+
+
+\clearpage
+\newpage
+\setstretch{1}
+\bibliography{RefugeeProximity,RefugeeAppendix}
+
+
+\end{document}
+

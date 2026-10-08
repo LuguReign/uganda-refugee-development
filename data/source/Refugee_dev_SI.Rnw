@@ -1,0 +1,3066 @@
+\documentclass[12pt]{article}
+
+\newcounter{lastnote}
+\newenvironment{scilastnote}{%
+\setcounter{lastnote}{\value{enumiv}}%
+\addtocounter{lastnote}{+1}%
+\begin{list}%
+{\arabic{lastnote}.}
+{\setlength{\leftmargin}{.22in}}
+{\setlength{\labelsep}{.5em}}}
+{\end{list}}
+
+% Other necessary packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{array}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+\usepackage{listings}
+\usepackage[margin=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{natbib}
+\usepackage{proof}
+\usepackage{multirow}
+\usepackage{hhline}
+\usepackage{wrapfig}
+\usepackage [english]{babel}
+\usepackage{grffile}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage[tikz]{bclogo}
+\usetikzlibrary{chains}
+\usetikzlibrary{positioning}
+\usetikzlibrary{arrows}
+\usepackage{lscape}
+\usepackage [autostyle, english = american]{csquotes}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{indentfirst}
+\usepackage{hyperref}
+\usepackage{pdfpages}
+\usepackage{threeparttable}
+\usepackage{booktabs}
+\newcommand{\tabitem}{~~\llap{\textbullet}~~}
+\bibliographystyle{apsr}
+\bibpunct{(}{)}{;}{a}{,}{,}
+\DeclareGraphicsExtensions{.pdf,.png,.jpg}
+\setlength{\tabcolsep}{.18cm}
+\usepackage{fancyvrb}
+\usepackage{sectsty}
+\sectionfont{\fontsize{14}{14}\selectfont}
+\subsectionfont{\fontsize{12}{12}\selectfont}
+\usepackage{numprint}
+\npthousandsep{,}
+
+\usepackage{listings}
+\lstset{
+basicstyle=\small\ttfamily,
+columns=flexible,
+breaklines=true
+}
+
+% COLOR CODING OUR COMMENTS
+\newenvironment{bluetext}{\color{blue}}{\ignorespacesafterend} 
+
+% ==Cross Referencing Different Docs
+\usepackage{xr}
+\externaldocument{Refugee_dev_Paper}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{{\large \bf Inclusive Refugee-Hosting Improves Local Development\\
+and Prevents Public Backlash}}
+
+
+\author{
+Yang-Yang Zhou\thanks{Assistant Professor, Department of Political Science, University of British Columbia, Harvard Academy Scholar, and CIFAR Azrieli Global Scholar, \href{mailto:yangyang.zhou@ubc.ca}{yangyang.zhou@ubc.ca}, \href{https://www.yangyangzhou.com/}{www.yangyangzhou.com}}
+\hspace{2cm} Guy Grossman\thanks{Professor, Department of Political Science, University of Pennsylvania, \href{ggros@upenn.edu}{ggros@upenn.edu}, \href{https://web.sas.upenn.edu/ggros/}{www.web.sas.upenn.edu/ggros}}
+\hspace{2cm} Shuning Ge\thanks{Ph.D. Student, Department of Political Science, Massachusetts Institute of Technology, \href{shuningg@mit.edu}{shuningg@mit.edu}, \href{https://polisci.mit.edu/people/shuning-ge}{www.polisci.mit.edu/people/shuning-ge}}
+}
+
+
+\date{\today}
+%%%%%%%%%%%%%%%%% END OF PREAMBLE %%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+<<eval=TRUE,echo=FALSE, results='hide', message=FALSE>>= 
+library(knitr)
+
+opts_chunk$set(cache = TRUE, 
+               cache.path = 'cache_dev_SI/',
+               fig.path = 'figures_dev_SI/', 
+               tidy = TRUE, 
+               echo = FALSE, 
+               warning = FALSE, 
+               message = FALSE, 
+               fig.pos = 'H',
+               dev = 'pdf', 
+               dpi=200)
+
+options(width = 110, digits = 1, scipen=10000)
+
+@
+
+
+\maketitle
+
+<<eval=TRUE, echo = FALSE, tidy=TRUE, warning=FALSE, error=FALSE, message=FALSE>>=
+
+setwd("Paper_Inputs")
+
+library(haven)
+library(tidyverse)
+library(estimatr)
+library(texreg)
+library(mgcv)
+library(doMC)
+library(rgdal)
+library(equivalence)
+library(kableExtra)
+library(lfe)
+library(sf)
+library(patchwork)
+library(binsreg)
+library(doMC)
+library(ggthemes)
+library(broom)
+library(DescTools)
+library(tidytext)
+library(ggridges)
+library(survey)
+library(sensemakr)
+library(formula.tools)
+library(xtable)
+
+'%notin%' <- Negate('%in%')
+
+## Load data and rescale treatments
+df_pol <- read_csv("political_data_merged_Dev_Econ_Paper.csv") %>%
+  mutate(
+    nearest_exposure_plus_20 = case_when(
+      min_distance < 20~asinh(sum_exposure_20km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_50 = case_when(
+      min_distance < 50~asinh(sum_exposure_50km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_100 = case_when(
+      min_distance < 100~asinh(sum_exposure_100km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure = asinh(nearest_exposure),
+    region_year = paste(region, year),
+    year_numeric = as.numeric(year)
+  ) %>%
+  mutate(across(starts_with("nearest_exposure"), ~scale(.x))) %>%
+  mutate(year = as.character(year),
+         parish_id = as.character(parish_id))
+
+df_pol_full <- df_pol
+
+## specify control variables
+## FOR LATER - night lights(?), schools, health
+control_list <- c(
+  "population_census2002", "average_age_census2002", 
+  "proportion_male_census2002",
+  "literacy_rate_census2002",
+  "unemployment_rate_census2002", 
+  "agriculture_share_census2002", "coethnic_share_census2002",
+  "wealth_index_census2002",
+  "any_violent_event_census2002",
+  "distance_to_nearest_oil_well_in_km",
+  "borderdist", "roaddist", "capitoldist"
+)
+  
+years <- c("(year == '2006')", "(year == '2011')", "(year == '2016')", "(year == '2020')")
+ctr_grid <- expand.grid(control = control_list, year = years)
+ctr_grid$full_var <- paste0("I(", ctr_grid$control, "*", ctr_grid$year, ")")
+#controls <- paste0(ctr_grid$full_var, collapse = "+")
+
+controls <- paste0(ctr_grid$full_var[grepl("2006", ctr_grid$year) | grepl("2011", ctr_grid$year) | grepl("2016", ctr_grid$year) | grepl("2020", ctr_grid$year)], collapse = "+")
+controls_school <- paste0(ctr_grid$full_var[grepl("2006", ctr_grid$year) | grepl("2011", ctr_grid$year) | grepl("2016", ctr_grid$year) | grepl("2020", ctr_grid$year)], collapse = "+")
+controls_health <- paste0(ctr_grid$full_var[grepl("2006", ctr_grid$year) | grepl("2011", ctr_grid$year) | grepl("2016", ctr_grid$year)], collapse = "+")
+controls_road <- paste0(ctr_grid$full_var[grepl("2016", ctr_grid$year) | grepl("2020", ctr_grid$year)], collapse = "+")
+controls_wealth <- paste0(ctr_grid$full_var[grepl("2011", ctr_grid$year)], collapse = "+")
+
+## Subset df_pol to completes with covariates
+df_pol <- df_pol %>%
+  drop_na(min_distance, population_census2002, average_age_census2002, 
+          proportion_male_census2002, 
+          literacy_rate_census2002, unemployment_rate_census2002,
+          agriculture_share_census2002, wealth_index_census2002,
+          coethnic_share_census2002, any_violent_event_census2002,
+          distance_to_nearest_oil_well_in_km,
+          borderdist, roaddist, capitoldist)
+
+## For displaying coefficients
+cmap <- list(
+  'exposure' = "Baseline Presence", 
+  'I((year == "2006") * exposure)' = "Presence x 2006", 
+  'I((year == "2011") * exposure)' = "Presence x 2011", 
+  'I((year == "2016") * exposure)' = "Presence x 2016",
+  'I((year == "2020") * exposure)' = "Presence x 2020"
+)
+
+## Bin exposure measures
+df_pol <- df_pol %>%
+  mutate(
+    ## Binned exposure by quintiles
+    nearest_exposure_quin = cut(
+      nearest_exposure, 
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)), 
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_20_quin = cut(
+      nearest_exposure_plus_20, 
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)),
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_50_quin = cut(
+      nearest_exposure_plus_50,
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)),
+      include.lowest = TRUE
+    ),
+    ## Binary binned exposure
+    nearest_exposure_binary = cut(
+      nearest_exposure, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)), 
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_20_binary = cut(
+      nearest_exposure_plus_20, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)),
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_50_binary = cut(
+      nearest_exposure_plus_50, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)),
+      include.lowest = TRUE
+    )
+  )
+
+## ----------------
+## Load aid dataset
+## ----------------
+df_aid <- read_csv("aid_data_merged.csv") %>%
+  mutate(
+    nearest_exposure_plus_20 = case_when(
+      min_distance < 20~asinh(sum_exposure_20km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_50 = case_when(
+      min_distance < 50~asinh(sum_exposure_50km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_100 = case_when(
+      min_distance < 100~asinh(sum_exposure_100km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure = asinh(nearest_exposure)
+  ) %>%
+  mutate(across(starts_with("nearest_exposure"), ~scale(.x))) %>%
+  mutate(subcounty_id = as.character(subcounty_id))
+
+## specify control variables
+## FOR LATER - night lights(?), schools, health
+control_list_aid <- c(
+  "population", "average_age_census", 
+  "proportion_male_census",
+  "literacy_rate",
+  "unemployment_rate", "wealth_index",
+  "agriculture_share", "coethnic_share_census2002",
+  "violent_events", "fatalities", 
+  "distance_to_nearest_oil_well_in_km",
+  "borderdist", "roaddist", "capitoldist"
+)
+ 
+controls_aid <- paste0(control_list_aid, collapse = "+")
+
+## Subset df_pol to completes with covariates
+df_aid <- df_aid %>%
+  drop_na(min_distance, population, average_age_census, 
+          proportion_male_census, 
+          literacy_rate, unemployment_rate, wealth_index,
+          agriculture_share,
+          coethnic_share_census2002, violent_events, fatalities,
+          distance_to_nearest_oil_well_in_km,
+          borderdist, roaddist, capitoldist)
+
+## For displaying coefficients
+cmap_aid <- list(
+  'exposure' = "Presence"
+)
+
+## Bin exposure measures
+df_aid <- df_aid %>%
+  mutate(
+    ## Binned exposure by quintiles
+    nearest_exposure_quin = cut(
+      nearest_exposure, 
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)), 
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_20_quin = cut(
+      nearest_exposure_plus_20, 
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)),
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_50_quin = cut(
+      nearest_exposure_plus_50,
+      labels = c("q1", "q2", "q3", "q4", "q5"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .2)),
+      include.lowest = TRUE
+    ),
+    ## Binary binned exposure
+    nearest_exposure_binary = cut(
+      nearest_exposure, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)), 
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_20_binary = cut(
+      nearest_exposure_plus_20, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)),
+      include.lowest = TRUE
+    ),
+    nearest_exposure_plus_50_binary = cut(
+      nearest_exposure_plus_50, 
+      labels = c("bin0", "bin1"),
+      breaks = quantile(nearest_exposure, probs = seq(0, 1, .5)),
+      include.lowest = TRUE
+    )
+  )
+
+## ---------------
+## Load ab dataset
+## ---------------
+# df_ab <- read_csv(
+#   "ab_data_merged.csv",
+#   col_types = c(.default = "?", migrants_attitude_standardized = "d",
+#                 migrants_movement_standardized = "d",
+#                 border_freedom_standardized = "d",
+#                 feel_unsafe_standardized = "d",
+#                 feared_crime_standardized = "d",
+#                 born_non_ugandan_standardized = "d",
+#                 foreigner_residents_standardized =)
+# ) %>%
+df_ab <- read.csv("ab_data_merged.csv") %>%
+  mutate(
+    ## Turn into dummies
+    christian = case_when(religion2 == "christian"~1, !is.na(religion2)~0,
+                          TRUE~NA_real_),
+    muslim = case_when(religion2 == "muslim"~1, !is.na(religion2)~0,
+                       TRUE~NA_real_),
+    other_relig = case_when(religion2 == "other"~1, !is.na(religion2)~0,
+                            TRUE~NA_real_),
+    ## Rescale some outcomes
+    feel_unsafe_standardized = feel_unsafe_standardized * -1,
+    feared_crime_standardized = feared_crime_standardized * -1,
+    ## Exposure
+    nearest_exposure_plus_20 = case_when(
+      min_distance < 20~asinh(sum_exposure_20km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_50 = case_when(
+      min_distance < 50~asinh(sum_exposure_50km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_100 = case_when(
+      min_distance < 100~asinh(sum_exposure_100km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure = asinh(nearest_exposure)
+  ) %>%
+  mutate(across(starts_with("nearest_exposure"), ~scale(.x))) 
+
+## specify control variables
+## ethnicity, education, religion, language need to be fixed
+control_list_ab <- c(
+  "coethnic_pres", 
+  "education2", "christian",
+  "gender", "age", "urbrur", 
+  "borderdist", "roaddist", 
+  "capitoldist"
+)
+
+years <- c("(year == '2006')", "(year == '2011')", "(year == '2016')", "(year == '2020')") 
+ctr_grid_ab <- expand.grid(control = control_list_ab, year = years)
+ctr_grid_ab$full_var <- paste0("I(", ctr_grid_ab$control, "*", ctr_grid_ab$year, ")")
+
+controls_ab_full <- paste0(ctr_grid_ab$full_var, collapse = "+")
+controls_ab_cs <- paste0(control_list_ab, collapse = "+")
+controls_ab_migattitude <- paste0(ctr_grid_ab$full_var[grepl("2016", ctr_grid_ab$year) | grepl("2020", ctr_grid_ab$year)], collapse = "+")
+controls_ab_migmovement <- paste0(ctr_grid_ab$full_var[grepl("2020", ctr_grid_ab$year)], collapse = "+")
+controls_ab_road <- paste0(ctr_grid_ab$full_var[grepl("201[1|6]", ctr_grid_ab$year) | grepl("2020", ctr_grid_ab$year)], collapse = "+")
+
+## Subset df_pol to completes with covariates
+df_ab <- df_ab %>%
+  drop_na(min_distance, coethnic_pres, education2, 
+          christian, muslim, other_relig,
+          urbrur, gender, age, borderdist, roaddist, capitoldist)
+
+## Add in instrument on parish level
+df_ab <- df_ab %>%
+  mutate(P_02_ID = as.character(P_02_ID)) %>%
+  left_join(df_pol %>%
+              dplyr::select(year, parish_id, nearest_exposure_z_ln) %>%
+              mutate(year = as.numeric(year)),
+            by = c("year" = "year", "P_02_ID" = "parish_id"))
+
+## For displaying coefficients
+cmap_ab <- list(
+  'exposure' = "Presence",
+  'I((year == "2006") * exposure)' = "Presence x 2006", 
+  'I((year == "2011") * exposure)' = "Presence x 2011", 
+  'I((year == "2016") * exposure)' = "Presence x 2016", 
+  'I((year == "2020") * exposure)' = "Presence x 2020"
+)
+
+## -----------------------------------------------------
+## Load cross-national AB dataset for descriptive figure
+## -----------------------------------------------------
+ab_cn <- read_csv("ab7_final_34ctry.csv")
+
+## ------------------------
+## Load utilization dataset
+## ------------------------
+df_util <- read.csv("utilization_final.csv")
+
+## -----------------------------
+## Load yearly education dataset
+## -----------------------------
+df_edu <- read_csv("edu_yearly_data_merged_Dev_Econ_Paper.csv") %>%
+  mutate(
+    nearest_exposure_plus_20 = case_when(
+      min_distance < 20~asinh(sum_exposure_20km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_50 = case_when(
+      min_distance < 50~asinh(sum_exposure_50km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure_plus_100 = case_when(
+      min_distance < 100~asinh(sum_exposure_100km_rad),
+      TRUE~asinh(nearest_exposure)
+    ),
+    nearest_exposure = asinh(nearest_exposure),
+    region_year = paste(region, year),
+    year_numeric = as.numeric(year)
+  ) %>%
+  mutate(across(starts_with("nearest_exposure"), ~scale(.x))) %>%
+  mutate(year = as.character(year),
+         parish_id = as.character(parish_id))
+
+edu_years <- paste0("(year == '", 2002:2020, "')")
+ctr_grid_edu <- expand.grid(control = control_list, year = edu_years)
+ctr_grid_edu$full_var <- paste0("I(", ctr_grid_edu$control, "*", ctr_grid_edu$year, ")")
+
+controls_edu_yearly <- paste0(ctr_grid_edu$full_var, collapse = "+")
+
+## --------------------------------
+## Define function to run sensemakr
+## --------------------------------
+sensemakr_felm <- function(mod, varname, benchmark_var){
+  # Extract info
+  est <- tidy(mod) %>% filter(term == varname) %>% pull(estimate)
+  se <- tidy(mod) %>% filter(term == varname) %>% pull(std.error)
+  df <- mod$df
+  # Run sensitivity analysis
+  run_sm <- sensemakr(estimate = est, se = se, dof = df,
+                      treatment = varname)
+  sens_stats <- run_sm$sensitivity_stats
+  # Run informal benchmarking
+  t.dydj <- tidy(mod) %>% filter(term == benchmark_var) %>% pull(statistic)
+  t.dxdj <- tidy(mod$dx.sens) %>% filter(term == benchmark_var) %>% pull(statistic)
+  df.dx <- mod$dx.sens$df
+  r2yxj.dx <- partial_r2(t_statistic = t.dydj, dof = df)
+  r2dxj.x <- partial_r2(t_statistic = t.dxdj, dof = df.dx)
+  bounds <- ovb_partial_r2_bound(r2dxj.x = r2dxj.x, r2yxj.dx = r2yxj.dx,
+                                 kd = c(1,5,10),
+                                 ky = c(1,5,10))
+
+  bound_values <- adjusted_estimate(estimate = est,
+                                    se = se,
+                                    dof = df,
+                                    r2dz.x = bounds$r2dz.x,
+                                    r2yz.dx = bounds$r2yz.dx)
+  
+  sens_stats <- sens_stats %>%
+    mutate(adj_est_1x = bound_values[1],
+           adj_est_5x = bound_values[2],
+           adj_est_10x = bound_values[3])
+  
+  return(sens_stats)
+}
+
+## -----------------------------------------
+## Load UNHCR population data and shapefiles
+##------------------------------------------
+allrefpop <- read.csv("unhcr_popstats_export_time_series_all_data2021.csv", header = TRUE) #refugee pop year global
+
+### Load shapefiles
+refsites <- st_read("ugakaimug/settlement_boundaries.shp", quiet = TRUE)
+
+refsites_kitgum_okollo <- st_read("Kitgum and Okollo/Boundaries_Kitgum_Okollo.shp", quiet = TRUE)
+
+refsites_kitgum_okollo <- st_transform(refsites_kitgum_okollo, st_crs(refsites))
+
+country <- st_read("Uganda_countryboundaries_adm0/uga_admbnda_adm0_UBOS_v2.shp", quiet = TRUE)
+
+parish <- st_read("Uganda_Parish_Boundaries_2002_dissolved_final/uganda_2002_dissolve4.shp", quiet = TRUE) %>%
+  mutate(P_02_ID = as.character(P_02_ID))
+
+## -----------------------------------------------------
+## Load newspapers and aid levels data
+## -----------------------------------------------------
+newspaper <- read_csv("allnewsp_nov4.csv")
+aidtotals <- read_csv("refugee_aid_levels.csv")
+
+@
+
+\vspace{-1cm}
+
+%To number supplemental material with 'S': 
+\renewcommand{\thesection}{S\arabic{section}}   
+\renewcommand{\thetable}{S\arabic{table}}   
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\theequation}{S\arabic{equation}}
+
+\part*{\large For Online Publication: Supplementary Information}
+
+\addtocontents{toc}{\protect\setcounter{tocdepth}{2}}
+\tableofcontents
+
+\newpage
+\setstretch{1}
+
+
+\section{Detailed Data Description} 
+\label{SIsec:data}
+
+In this section, we provide detailed information on our procedure for matching administrative units across years, and for constructing and validating key variables used in the empirical analyses reported in the main paper. 
+We begin with an exhaustive discussion of how parishes are matched and merged successfully across years in the face of a massive administrative change that took place in Uganda in the past two decades. We then describe how we constructed and validated key variables (refugee presence, development outcomes, control variables) we utilized in the main analysis. These development outcomes include: school access (primary schools and secondary schools), health access index, and road density. Finally, we describe the construction of a supplementary Afrobarometer dataset.
+
+
+\subsection{Unit of Analysis: Parish-Data Construction}
+\label{SIsubsec:parishes}
+
+The study's unit of analysis is a parish. Parishes in Uganda are comprised of several nearby villages (median 5 villages per parish with SD=5.5) and they constitute an official administrative unit (local council-2 or LC2, villages are considered the lowest administrative unit, or LC1). In the past two decades, Uganda has experienced substantial proliferation of administrative units~\citep{guy2014}. According to the National Population and Housing Census Report (\citeyear{ug2016census}), the number of parishes increased from 5,238 in 2002 to 7,241 in 2014. As Table~\ref{tab:admin_units} makes clear, splits that (mechanically) increase in the number of administrative units took place at all level of local governments. 
+
+\begin{table}[h!]
+	\begin{center}
+			\begin{threeparttable}
+				\caption{Number of Administrative Units by Census, 1969 – 2014}
+				\label{tab:admin_units}
+				\begin{tabular}{lcccc} 
+					\hline
+					& \multicolumn{4}{c}{Census Year} \\
+					\cline{2-5} \\ [-1.5ex] 
+					\textbf{Level of Administrative unit} & 1969 & 1991 & 2002 & 2014 \\
+					\hline 
+					\hline
+					District & 21 & 38 & 56 & 112   \\
+					County & 111 & 163 & 163 & 181  \\
+					Sub-county  & 594 & 884 & 958 & 1,382  \\
+					Parish & 3,141 & 4,636 & 5,238 & 7,241   \\
+					\hline	
+				\end{tabular}
+			\end{threeparttable}
+	\end{center}
+\end{table}
+
+The proliferation of administrative units means that administrative boundaries have changes quite dramatically over the study period. In order to ensure that results across years represent a treatment and not a compositional effect, we had to keep parish boundaries, our unit of analysis, constant across years (2001, 2006, 2011, 2016, 2020). In other words, our first key task was to match and standardize parishes across years and datasets (census data, schools and health facilities data, nightlight data, etc.). We note that this exercise has not been undertaken previously by Ugandan scholars, and as such, we view it as one of the key contributions of our study.   
+
+We set our baseline parish boundaries to 2001, based on the mapping exercise of Uganda Bureau of Statistics (UBoS) in preparation for the 2002 census. In other words, 2001 is the benchmark year we selected for all longitudinal empirical analysis for the purpose of boundary consistency.  In order to map administrative unit boundaries across years, we used publicly available shapefiles, and more limited crosswalks generated by other scholars. In more details, we considered 2006 parishes to be the same with 2002's and matched directly to 2002's mainly relying on string-based general matching methods (discussed in Section \ref{ss:sub3}). We generated a 2016-to-2002 crosswalk for mapping 2016 parishes to 2002's (discussed in Section \ref{ss:sub1}). Another crosswalk which maps 2011 parishes to 2016's (discussed in Section \ref{ss:sub2}) was also generated in converting 2011 parishes to 2016's first and subsequently to 2002's. With regard to administritive units in 2020, we considered them the same as 2016's.
+
+However, another key challenge stands in the way of making use of these crosswalks. Names and boundaries of different admin levels (district, county, sub-county, parish) are inconsistent across different datasets, even in the same year. For example, some administrative unit names in 2016 are quite different than admin unit names we have in 2016-to-2002 crosswalk where the 2016 admin names come from Uganda 2016 shapefile. Discrepancies are due to either different formatting, minor variations in names used by UBoS or mostly, typos (see Table~\ref{tab:match_eg} for examples of frequent inconsistencies). 
+Hence, as a pre-processing step before using crosswalks, we reply on general matching methods again to first match different datasets (i.e. health facility data, school data, etc.) to these crosswalks before they could be used to harmonize the unit of study. 
+
+
+\begin{table}[h!]
+	\begin{center}
+		\begin{threeparttable}
+			\caption{Matching problem: examples of inconsistencies}
+			\label{tab:match_eg}
+			\begin{tabular}{|l|l|}
+				\hline
+				\textbf{Types} & \textbf{Examples}                                                  \\ \hline
+				\multicolumn{1}{|l|}{}                               & \multicolumn{1}{l|}{single character becomes double}      \\ \cline{2-2} 
+				\multicolumn{1}{|l|}{}                               & \multicolumn{1}{l|}{double characters become single}      \\ \cline{2-2} 
+				\multicolumn{1}{|l|}{\multirow{-3}{*}{Typo}}         & \multicolumn{1}{l|}{(ch, c, k), (u, w, y, v), (th, t, s), (r, l)} \\ \hline
+				\multicolumn{1}{|l|}{}                               & \multicolumn{1}{l|}{(west, western), (central, center, centre)}      \\ \cline{2-2}
+				\multicolumn{1}{|l|}{}                               & \multicolumn{1}{l|}{(town council, T.C., T/C)}      \\ \cline{2-2}
+				\multicolumn{1}{|l|}{\multirow{-3}{*}{Minor variation} }               & \multicolumn{1}{l|}{(A parish, A ward, A)}                \\ \hline
+				\multicolumn{1}{|l|}{Different formating}            & \multicolumn{1}{l|}{- ; \_ ; . ; \ ; /}                           \\ \hline
+			\end{tabular}
+		\end{threeparttable}
+	\end{center}
+\end{table}
+
+\subsubsection{General matching methods}\label{ss:sub3}
+
+\textbf{String matching}
+\noindent we used string matching when identifying non-identical names that describe the same administrative unit across datasets. Instead of using regular expressions, we developed a fuzzy-match algorithm that recognizes matches with one-letter discrepancy for strings less than 6 letters (e.g. \textit{Koboko} VS. \textit{Kobooko}, \textit{Ombachi} VS. \textit{Ombaci}). Strings that have more letters were allowed a discrepancy of 2 letters such as \textit{Bukokho} vs. \textit{Bukhoko}, \textit{Kyegegwa} vs. \textit{Kyegeguua}. We applied fuzzy-match under a fairly strict structured environment, that is, all upper-level administrative names were required to be the same. For example, to increase matching precision, when harmonizing parish level names, we used fuzzy-match to examine parishes under the same district, county, and sub-county.\\
+
+\noindent\textbf{Upper/Lower-level unit tracing} is applied when administrative units were aggregated with other units to form a higher-level unit or splinted into different lower-level units. For example, \textit{Kalungu} District in 2011 was a county (also named \textit{Kalungu}) in 2002. Note that villages (LC1s) are also included in this step as they are the lower-level for parishes (LC2s). Applied after string matching, this method first scrutinizes the nearest upper and lower-levels for identical administrative unit names. If failed, all lower level units are compared. If over 50\% of the lower units match, the two localities are considered the same no matter how different their names are. For example, Parish A in district D, county C, and sub-county S in 2006 would be matched to parish B in 2002 if all 3 villages of parish A in 2006 appear as villages in parish B in 2002. Note that to apply this rule, parish B needs to also be in district D, county C, and sub-county S.\\
+
+%Even though original names are carried to the new unit, our supervised string matching method will not be able to identify these matches because of the level changes. 
+
+\noindent\textbf{Keyword matching} is mainly needed in matching village names in lower-level unit tracing process and in matching health facility datasets (see Section \ref{ss:sub4}). We used this method for cases that composed of redundant descriptive or administrative strings like \textit{parish, ward, division, town, primary schools, health centers, facilities} (e.g.\textit{kikyusa (subcounty name) holy cross} vs. \textit{holy cross} vs. \textit{holy cross health center}). These expressions most likely appear in the format of a variety of abbreviations. Fed with a list of possible formats, our keyword matching algorithm was programmed to ignore these descriptive expressions and to only compare the major part (i.e., main administrative names or Health facility names). This method was also used under the restriction that upper-level administrative units must match, again in order to preserve accuracy.
+
+\noindent\textbf{Distance-based matching} is only used for matching individual schools (primary and secondary) within each parish, the unit of analysis of our study. This method only applies at the last step, when string-matching, keyword-matching, and manual-matching fail. We construct a distance matrix of all schools in each parish, based on which we pair those that are within 5 km to each other the same facility. This matching strategy hinges on two observable facts: first, it's extremely unlikely that primary or secondary schools would be built within such close distance; second, it's quite common in Uganda that schools changes their name for various reasons such as change of donors. However, this does not apply to health facilities. Health centers at different levels might be fairly close to one another, and they are mostly commonly named after the location whose name does not change often.
+
+\subsubsection{2016-to-2002 crosswalk}\label{ss:sub1}
+
+\noindent
+String matching had limited usage when matching 2016 parishes back to 2002. This was the case because parishes in 2016 had substantially redrawn boundaries compared to 2002 boundaries, even for parishes with identical names. Comparing Uganda parish level shapefiles in 2002 and 2016, we found that only 559 parishes in 2002 kept the same boundaries in 2016 (see Figure \ref{fig:parish_same}). By contrast, 1,867 parishes in 2002 were splintered into 2,759 parishes in 2016 (one to multiple, see Figure \ref{fig:parish_splitted}), and 756 parishes were combined into 719 parishes in 2016 (multiple to one, see Figure \ref{fig:parish_combined}). Moreover, the majority of 2002 parishes (2,194) got redistributed rather randomly into 3,464 2016 parishes (see Figure \ref{fig:parish_random}). Again - this haphazard process made string matching impractical.
+
+\begin{figure}[H]
+	\caption{Compare 2002 and 2016 parish shapefiles}\label{fig:parish_2002_2016}
+	\begin{subfigure}[h]{0.4\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/parish_2002_2016_pic3.pdf}
+		\caption{}\label{fig:parish_same}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[h]{0.4\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/parish_2002_2016_pic1.pdf}
+		\caption{}\label{fig:parish_combined}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[h]{0.4\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/parish_2002_2016_pic2.pdf}
+		\caption{}\label{fig:parish_splitted}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[h]{0.4\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/parish_2002_2016_pic4.pdf}
+		\caption{}\label{fig:parish_random}
+	\end{subfigure}
+\end{figure}
+
+Building on shapefiles from 2002 and 2016, we used another approach to map between 2016 and 2002 parishes -- an overlapping area method. Specifically, we used the intersection toolkit in ArcGIS and adjusted parameters such that minor misalignment on the boundaries would be disregarded to eliminate potential issues introduced by shapefile digitization errors. Each of the parishes in 2016 was proportionally assigned to 2002 parishes based on the percentage of overlapping areas. Under an additional assumption of evenly distributed population, we were able to allocate census data that are in 2016 parish units to 2002 parishes. Take parish Aninata in 2016 as an example (see Figure \ref{fig:parish_2002_2016_exampel}). 
+%According to the overlapping area calculated by ArcGIS, 22\% of Aninata was in Atunga parish, and 78\% was in Kanu parish in 2002. Therefore, if there were 101 votes in parish Aninata in 2016 election, we assumed that 22 belongs to Atunga and 78 to Kanu.
+
+\begin{figure}[H]
+	\caption{Parish Aninata in 2016}\label{fig:parish_2002_2016_exampel}
+	\centering
+	\includegraphics[width=0.33\linewidth]{figures_Ge/parish_2016_2002_example.pdf}
+\end{figure}
+
+\subsubsection{2011-to-2016 crosswalk}\label{ss:sub2}
+
+Parish distribution in 2011 is much closer to 2016's than 2002's. Since we already constructed a (relatively) precise 2016-to-2002 crosswalk based on parish overlapping area boundaries as discussed above, generating a 2011-to-2016 crosswalk increased precision in mapping 2011 parishes back to 2002's.
+
+In doing this, we built on an initial mapping generated by \citet{bowles2020information}. These authors mainly used string-matching and lower-level units tracing to identify same polling places across 3 periods of time (before 2013, between the 2013 and 2015 reorganization, 2016) for the purpose of defining the targeting sample of interests that entails fairly specific characteristics in voter registers information. 
+While useful, we identified several problems when implementing this crosswalk for our specific purpose. %First, Jeremy's mapping lacked around 100 2016 parishes according to Uganda's 2016 parish shapefile. Those parishes were excluded in Jeremy’s work since they had no election data at the polling station level. We added them back based on the 2016 shapefile. Second, we identified a large number of 2016 polling stations that were not matched with 2011 polling stations. This missingness mainly came from the difficulty to trace sufficient numbers of shared voters in the lower-level administrative units. Third, and the most commonly, the exact matching parish in 2011 for a specific 2016 parish can be found while it was mismatched in Jeremy’s previous process. One reason is that they only focused on a subset of 2011 parishes which naturally excluded many correct matching parishes. Also, their string-matching method was exploited in a “unsupervised” way with relieving restrictions of other administrative levels like county or district, especially for those parishes that were out of their sample of interests. 
+We corrected these issues with similar matching methods with a fairly stricter and broader searching and matching process. This allowed us to correct and add 492 matches between 2011 and 2016 parishes.
+
+\clearpage
+\newpage
+\subsection{Refugee Presence}
+
+\subsubsection{Refugee settlements in Uganda}
+\label{SIsubsec:cellplot}
+<<map_settlements_overtime, eval = TRUE, echo = FALSE, tidy=TRUE, fig.width = 8.5, fig.height = 8, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="This set of maps shows the refugee settlements in Uganda over the years of our study.">>=
+
+setwd("Paper_Inputs")
+
+## Load shapefiles
+refsites <- st_read("ugakaimug/settlement_boundaries.shp", quiet = TRUE)
+refsites_kitgum_okollo <- st_read("Kitgum and Okollo/Boundaries_Kitgum_Okollo.shp", quiet = TRUE)
+refsites_kitgum_okollo <- st_transform(refsites_kitgum_okollo, st_crs(refsites))
+country <- st_read("Uganda_countryboundaries_adm0/uga_admbnda_adm0_UBOS_v2.shp", quiet = TRUE)
+refsites_mungula <- st_read("UGA_mungula_ii/UGA_mungula_ii.shp", quiet = TRUE)
+refsites_mungula <- st_transform(refsites_mungula, st_crs(refsites))
+refsites_mungula = refsites_mungula %>% 
+  mutate(Name_setlm = "Mungula II", District = "Adjumani", Sqkm = 10.279261) %>%
+  dplyr::select(District, Name_setlm, Sqkm, geometry)
+
+## Clean up refsites names
+refsites$Name_setlm <- as.character(refsites$Name_setlm)
+refsites$Name_setlm[4] <- "Oliji I"
+refsites$Name_setlm[5] <- "Oliji II"
+refsites$Name_setlm[17] <- "Maaji 1A"
+refsites$Name_setlm[18] <- "Maaji 1B"
+refsites$Name_setlm[30] <- "Palorinya I"
+refsites$Name_setlm[31] <- "Palorinya II"
+refsites$Name_setlm[32] <- "Palorinya III"
+refsites$Name_setlm[33] <- "Palorinya IV"
+refsites$Name_setlm[34] <- "Palorinya V"
+refsites$Name_setlm[35] <- "Palorinya VI"
+refsites$Name_setlm[36] <- "Palorinya VII"
+refsites$Name_setlm[37] <- "Palorinya VIII"
+refsites$Name_setlm[38] <- "Palorinya IX"
+refsites$Name_setlm[39] <- "Palorinya X"
+
+settlement_pops <- df_pol %>% 
+  dplyr::select(year, ends_with(" Population")) %>%
+  pivot_longer(cols = ends_with(" Population"), names_to = "Name_setlm", values_to = "population") %>%
+  mutate(Name_setlm = gsub(" Population", "", Name_setlm)) %>%
+  distinct()
+
+open_2001 <- settlement_pops %>% filter(population > 0 & year == 2001) %>% pull(Name_setlm) 
+open_2006 <- settlement_pops %>% filter(population > 0 & year == 2006) %>% pull(Name_setlm) 
+open_2011 <- settlement_pops %>% filter(population > 0 & year == 2011) %>% pull(Name_setlm) 
+open_2016 <- settlement_pops %>% filter(population > 0 & year == 2016) %>% pull(Name_setlm) 
+open_2020 <- settlement_pops %>% filter(population > 0 & year == 2020) %>% pull(Name_setlm) 
+
+## ----
+## Plot
+## ----
+open_settlements_2001 <- ggplot() + 
+  geom_sf(data = country, fill = "white") + 
+  geom_sf(data = refsites %>% filter(Name_setlm %in% open_2001), fill = "blue") + 
+  geom_sf(data = refsites_kitgum_okollo %>% filter(Name %in% open_2001), fill = "blue") + 
+  labs(title = "Refugee Settlements open in 2001") + 
+  theme_map()
+
+open_settlements_2006 <- ggplot() + 
+  geom_sf(data = country, fill = "white") + 
+  geom_sf(data = refsites %>% filter(Name_setlm %in% open_2006), fill = "blue") + 
+  geom_sf(data = refsites_kitgum_okollo %>% filter(Name %in% open_2006), fill = "blue") + 
+  labs(title = "Refugee Settlements open in 2006") + 
+  theme_map()
+
+open_settlements_2011 <- ggplot() + 
+  geom_sf(data = country, fill = "white") + 
+  geom_sf(data = refsites %>% filter(Name_setlm %in% open_2011), fill = "blue") + 
+  geom_sf(data = refsites_kitgum_okollo %>% filter(Name %in% open_2011), fill = "blue") + 
+  labs(title = "Refugee Settlements open in 2011") + 
+  theme_map()
+
+open_settlements_2016 <- ggplot() + 
+  geom_sf(data = country, fill = "white") + 
+  geom_sf(data = refsites %>% filter(Name_setlm %in% open_2016), fill = "blue") + 
+  geom_sf(data = refsites_kitgum_okollo %>% filter(Name %in% open_2016), fill = "blue") + 
+  labs(title = "Refugee Settlements open in 2016") + 
+  theme_map()
+
+open_settlements_2020 <- ggplot() + 
+  geom_sf(data = country, fill = "white") + 
+  geom_sf(data = refsites %>% filter(Name_setlm %in% open_2020), fill = "blue") + 
+  geom_sf(data = refsites_kitgum_okollo %>% filter(Name %in% open_2020), fill = "blue") + 
+  geom_sf(data = refsites_mungula %>% filter(Name_setlm %in% open_2020), fill = "blue") + 
+  labs(title = "Refugee Settlements open in 2020") + 
+  theme_map()
+
+(open_settlements_2001 + open_settlements_2006 + open_settlements_2011) / (open_settlements_2016 + open_settlements_2020)
+
+@
+
+<<settlement_cellplot, eval = TRUE, echo = FALSE, tidy=TRUE, fig.width = 8.5, fig.height = 8, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="This figure shows the population for each refugee settlement (y-axis) over the years of our study (x-axis).">>=
+
+df_pol %>% dplyr::select(year, ends_with(" Population")) %>% 
+  distinct() %>%
+  pivot_longer(cols = ends_with(" Population"), names_to = "settlement", 
+               values_to = "population") %>%
+  mutate(settlement = gsub(" Population", "", settlement),
+         population = case_when(population == 0~NA_real_, TRUE~population),
+         year = as.character(as.numeric(year))) %>%
+  group_by(settlement) %>%
+  filter(!all(is.na(population))) %>%
+  ggplot(aes(year, reorder(settlement, desc(settlement)), fill = population/1000)) + 
+  geom_tile(colour = "black") + 
+  scale_fill_continuous(low = "#9ec2ff", high = "#03018c", na.value = "white") +
+  labs(x = "Year", y = "Settlement", 
+       title = "Population of Settlement by Year (white = closed)") + 
+  theme_bw() + 
+  theme(legend.position = "bottom")
+
+@
+
+% Language about Kitgum originally
+%We can see a large settlement in Northern Uganda present in 2001, but closed by 2006. This is Kitgum. Checking with our correspondence with UNHCR Uganda office: ``Most of the refugees in the 2 non-settlement areas were actually staying in those locations though they were not designated as settlements but may have moved to other settlements or back to South Sudan following the signing of the peace agreement in 2005.''
+
+\newpage
+\subsubsection{Distribution of Presence measures}
+
+%[Plot of exposure measure over time]
+<<exposure_measure, eval = TRUE, echo = FALSE, tidy=TRUE, fig.width = 8, fig.height = 3.5, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="Levels of refugee presence, parishes within 150km. The figure shows that for parishes within 150km of any refugee settlement, our three alternative refugee presence measures all increase after the December 2013 start of the South Sudanese civil war (red line).">>=
+
+df_exp_overtime <- df_pol %>% 
+  filter(min_distance < 150) %>%
+  dplyr::select(year, nearest_exposure, nearest_exposure_plus_20, 
+                nearest_exposure_plus_50) %>%
+  pivot_longer(cols = contains("exposure")) %>%
+  mutate(name = case_when(
+    name == "nearest_exposure"~"Nearest",
+    name == "nearest_exposure_plus_20"~"Nearest + 20km",
+    name == "nearest_exposure_plus_50"~"Nearest + 50km"
+    ),
+    name = fct_relevel(name, "Nearest", "Nearest + 20km", "Nearest + 50km")
+  )
+
+## Get summary
+df_exp_overtime_summ <- df_exp_overtime %>%
+  group_by(year, name) %>%
+  do({
+    lm_robust(value ~ 1, data = .) %>% tidy()
+  })
+
+ggplot(df_exp_overtime_summ, aes(as.numeric(year), estimate)) + 
+  geom_jitter(data = df_exp_overtime, aes(as.numeric(year), value), 
+              alpha = .01) + 
+  geom_point(colour = "blue", size = 2) + 
+  geom_errorbar(aes(ymin = conf.low, ymax= conf.high), width = 0,
+                colour = "blue") + 
+  geom_line(lty = "dashed", colour = "blue", size = 1) + 
+  geom_vline(aes(xintercept = 2014), colour = "#ba0000") + 
+  scale_x_continuous(breaks = c(2001, 2006, 2011, 2016, 2020)) + 
+  labs(x = "Year", y = "Refugee Presence") + 
+  facet_wrap(~ name) + 
+  theme_bw()
+
+@
+
+<<distribution_exposure, eval = TRUE, echo = FALSE, tidy=TRUE, fig.width = 8, fig.height = 3, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="This figure shows the distribution of our refugee presence measures for all parishes within 150km of a refugee settlement.">>=
+
+df_pol %>% 
+  filter(min_distance < 150) %>%
+  dplyr::select(nearest_exposure, nearest_exposure_plus_20, 
+                nearest_exposure_plus_50) %>%
+  pivot_longer(cols = everything()) %>%
+  mutate(name = case_when(
+    name == "nearest_exposure"~"Nearest",
+    name == "nearest_exposure_plus_20"~"Nearest + 20km",
+    name == "nearest_exposure_plus_50"~"Nearest + 50km"
+    ),
+    name = fct_relevel(name, "Nearest", "Nearest + 20km", "Nearest + 50km")
+  ) %>%
+  ggplot(aes(value)) + 
+  geom_density() + 
+  facet_wrap(~name, scale = "free") + 
+  theme_bw()
+
+@
+
+<<distribution_exposure_byyear, eval = TRUE, echo = FALSE, tidy=TRUE, fig.width = 8, fig.height = 5, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="This figure shows the distribution of our refugee presence measures for all parishes within 150km of a refugee settlement, faceted by year.">>=
+
+df_pol %>%  
+  filter(min_distance < 150) %>%
+  dplyr::select(year, nearest_exposure, nearest_exposure_plus_20, 
+                nearest_exposure_plus_50) %>%
+  pivot_longer(cols = contains("exposure")) %>%
+  mutate(name = case_when(
+    name == "nearest_exposure"~"Nearest",
+    name == "nearest_exposure_plus_20"~"Nearest + 20km",
+    name == "nearest_exposure_plus_50"~"Nearest + 50km"
+    ),
+    name = fct_relevel(name, "Nearest", "Nearest + 20km", "Nearest + 50km")
+  ) %>%
+  ggplot(aes(value)) + 
+  geom_density() + 
+  facet_grid(name~year, scales = "free") + 
+  theme_bw()
+
+@
+
+
+\newpage
+\subsection{Primary Schools}
+\label{SIsubsec:primarydata}
+
+We generated school access indexes as additional outcome variables. We created a comprehensive primary school list by combining datasets from three sources. The first one is obtained from Uganda Education Management Information Systems (Uganda EMIS) with 19,518 primary schools listed with detailed information including name, ownership, contacts, founding year, and coordinates. This dataset has been verified by crossing-checking with the World Bank's primary school collection. The second dataset is directly shared by the Uganda Bureau of Statistics (UBoS). This dataset extends the time span of the EMIS dataset (before 2017) to date (2020). The last one is collected by our field workers in Uganda which covered 5,277 primary schools with the same attributes. We firstly constructed a comprehensive primary school lists by comparing and merging EMIS dataset and the dataset collected by our field workers. 
+
+All three datasets have detailed information about school name, ownership (government-funded versus non government-funded), founding year, location names (from district to parish level), as well as coordinates. We firstly assigned 2002 administrative unit names to all schools based on GPS coordinates, after which we consolidated the three datasets by applying the following general matching methods elaborated in \ref{ss:sub3}: string matching (applied on school names); keyword matching (applied on school names); distance-based matching. Following such process, we found an overlap of 2,572 primary schools between these the EMIS dataset and our self-collected dataset. Therefore, this list of schools founded prior to 2017 consists of 19,518 EMIS records and 2,705 manually collected schools. Then, we used the up-to-date UBoS dataset as a complementary source to add in newly-founded (after 2017) primary schools. Meanwhile, we update the original list of primary schools founded before 2017 with additional primary schools documented by UBoS. In the end, we have in total 14,136 primary schools existing in 2001, 17,555 in 2006, 23,526 in 2011, 33,132 in 2016, and 34,519 in 2020. Distribution of all schools is mapped with refugee camps (with coral-colored boundaries) (see Figure \ref{fig:primary_school}).
+
+\begin{figure}[hbt!]
+	\centering
+	\caption{Distribution of primary schools.}\label{fig:primary_school}	
+	\includegraphics[width=\linewidth, height=0.49\textheight, keepaspectratio]{figures_Ge/primary_school.pdf}
+\end{figure}
+
+Building on this geocoded school list, we further constructed a parish-year cross-sectional dataset by first locating each school in 2002 admin units, then dissecting whether a school existed in 2001, 2006, 2011, 2016, and 2020 separately from its founding year information. Note that we categorized primary schools into two categories based on their ownership: government-funded (named "public") and non-government-funded (named "private"). We also recorded the number of schools in each category for each parish-year in our dataset. We defined the primary school access index to be the number of schools in each parish normalized by parish-level school-aged (6 - 13 years old) population (per thousand). Density plots are presented in Figure \ref{fig:primary_school_density}
+
+\begin{figure}[htb!]
+	\caption{Density plots for primary school access variables}\label{fig:primary_school_density}
+	\begin{subfigure}[h]{0.48\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/primary_school_density_public.pdf}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[h]{0.48\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/primary_school_density_private.pdf}
+	\end{subfigure}
+\end{figure}
+
+
+\newpage
+\subsection{Secondary Schools}
+\label{SIsubsec:secondarydata}
+
+Secondary schools access is another important outcome variable in our analysis. We exploited a geocoded and verified secondary school data from World Bank, plus a newly-released secondary school list shared by UBoS. Assuming that schools don’t close, we constructed a panel dataset with variables indicating if a school existed in 2006, 2011, 2016, or 2020 based on its founding year. Then, one additional index variable is constructed as a proxy of school access following similar process as health access index: the number of schools at the subcounty level normalized by subcounty school-aged (14 - 18 years old) population (per thousand).
+
+Note that this index variable is derived separately for government funded (public), non-government funded (private), and all schools. The school-aged population is calculated from the Worldpop sex-age structured datasets \footnote{Data can be downloaded at \url{https://www.worldpop.org/project/categories?id=8}}.  All variables are standardized to mean 0 and standard deviation 1 at last. Correlation between school access variables and health access index, road density, as well as wealth index range from 0.07 to 0.51. % (see table \ref{table:school_correlation}).
+
+\begin{figure}[htb!]
+	\caption{Density plots for school access variables}\label{fig:school_all}
+	\begin{subfigure}[h]{0.48\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/school_public_sec.pdf}
+		\caption{}\label{fig:school_distance}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[h]{0.48\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/school_private_sec.pdf}
+		\caption{}\label{fig:school_crowdness}
+	\end{subfigure}
+\end{figure} 
+
+
+\newpage
+\subsection{Health Access and Health Utilization (DHS)}
+\label{SIsubsec:healthdata}
+
+%We are interested in testing whether proximity to refugees settlements generated positive spillovers for the local population, for example, by improving access to health and education services. Below we discuss how we constructed a health access index measure at the (2002 boundary) parish level. 
+
+Uganda has 5 levels of public health facilities: HC I (clinic), HC II, HC III, HC IV, HC V (Hospital) (from the smallest to largest in scale). Each serves (at least in theory) a different administrative level (recall, Uganda has five levels of administrative units from the village (LC1) to the district (LC5)). Importantly, the different levels of health facility correspond to different levels of capacity, equipment, staff size, and available services. The most basic unit is the health clinic-1 (HC1), which operates at the village level and is usually staffed by community health workers with no formal nursing training; HC2s are deigned to serve several nearby villages; HC3s are designed to serve a subcounty, staffed by nurses, and offer basic laboratory testing services; HC4 are hospitals with limited range of services and finally, HC5s are regional hospitals offering a relatively broad set of services, including surgery capabilities~\citep{ug2016health}. 
+
+A valid health access index should be able to capture three dimensions: (a) {\it distance} to the nearest health facility; (b) {\it population served} by the facility, and (c) the {\it range of services} offered by the facility. In general, a parish has better health access when people travel shorter distances to  facilities serving fewer people while also offering more services. 
+
+\subsubsection{Health facility dataset construction}
+\label{ss:sub4}
+
+\noindent {\bf Data source}: A complete national Master Health Facility list (MFL) for Uganda is not publicly available~\citep{mpango2019qualitative}. We managed to obtain drafts of Uganda's 2020, 2017 and 2012 Master facility list from the Ministry of Health (MoH), and the 2006 health facility list from the Uganda Bureau of Statistics (UBoS).\\ 
+
+%Although these are the most comprehensive and validated data sources available in Uganda, merging across years and matching to our parish 2002 was far from straightforward. 
+
+%Firstly, health facilities data is mostly collected and gathered by human labor with paper-based approaches. This casts great doubt on data quality because of the limited skilled human resources and fragmented collection processes. 
+
+%Discrepancy in facility and administrative unit names usually come from misspelling and formatting, while facility names are somewhat messier. For example, HC II facility located at \textit{Walukuba} subcounty and \textit{Jinja} district with name \textit{kirinya} in 2012 data might appear with name \textit{kirinya health center ii} (add in level), \textit{walukuba kirinya} (add in administrative unit name), \textit{kirinya government HC} (add in ownership and incomplete level information) in 2006 or 2016 data, with high frequency of misspelling and mal-formating at each word. 
+%We spotted inconsistencies not only across years, but also within dataset.  %And standardized health facility identification number and non-standardized data attributes are clearly also in absence. %In order to construct a cross-sectional health facility list with information as complete and accurate as possible, tremendous efforts were devoted addressing all challenges. Detailed descriptions are in the following.\\
+
+\noindent \textbf{Data attributes:} There are 3,339 health facilities listed in the 2006 dataset, 5,410 in 2012, 6,248 in 2016, and 7,813 in 2020. All datasets contains name, level, owner, authority of the facility and the district, county (except for 2016 dataset), subcounty, and parish name. Around 57\% facilities in 2012 dataset, 64\% in 2016, and all facilities in the 2020 list additionally have exact coordinates documented.
+
+Across data sources we found both duplicate records and large discrepancies in basic facility information such as facility name, location, type, level, ownership, and other attributes. Among them, facility name and administrative unit names are most consequential, because we rely on them to locate and identify each facility, especially those that do not have available GIS coordinates. The inconsistencies exist not only across years but also within datasets. In addition, for some facilities, recorded coordinates lead to a location faraway from the district, county, subcounty, and parish that were separately documented for this facility. These challenges were addressed in the following merging and cross-checking process.\\
+
+%Multiple approaches were applied and some common principles need to be borne in mind. Firstly, level can not be included in facility identifiers across years because there are possibilities that a health facility gets upgraded or downgraded to a different level over time. Secondly, the combination of district name, subcounty name, and health facility name is needed as the proper unique identifier for facilities within dataset. Because facilities are often named the same in different places and there is no need adding in lower admin units. Lastly, if there is only one facility in a parish across different years, we considered it the same facility as long as level and ownership are the same, even if the facility name cannot match. If a facility could not be matched across years, we consider it only existing in that certain year. 
+
+\noindent \textbf{Merge across years:} We merged the four datasets and constructed a consolidated comprehensive facility list with the name, level, owner, authority of each facility, whether it exist in a certain year (2006, 2012, 2016, or 2020), administrative unit names and coordinates for the purpose of cross-checking and cross-referencing. The facility list of 2012 was used as a base data with 2006, 2016, and 2020 facilities matched to it separately. Unlike merging election data, we did not use crosswalks here because for half of 2012 data, 2/3 of 2016 data, and all 2020 data, we can directly use coordinates to locate facilities in 2002 parishes using GIS. After assigning 2002 administrative unit names to those that have coordinates, we cleaned and matched 2006 administrative names and the rest one third of 2016 facilities without coordinates level by level, as well as facilities names with 2012 dataset using general matching methods and 2016-to-2002 crosswalk. Although the crosswalk works the best in calculating percentages under the assumption of even distribution, we used it to evenly distribute 2016 facilities to each of the matched 2002 parishes, considering that it is plausible to think that residents have an equal ability to "access" that facility.  3,132 facilities in 2006 dataset were also found existing in 2012 data, 3,799 exists in both 2016 and 2012, and only 4,220 out of 7,813 facilities in the 2020 master lists were built after 2016.\\
+
+% 71 out of 153 counties and 158 out of 843 subcounties, we merged facilities by a combination of district and facility names. All matching results were double checked manually. 3132 facilities were successfully matched across these two years.
+	
+%The subcounty name restriction gets released because 2006 has so few facilities that one district hardly has facilities with the same name that are in different subcounties. This is also double checked manually. Ultimately, 2323 facilities were successfully matched. An additional 125 facilities were matched using fuzzy-match algorithm. Lastly, 684 were manually cleaned and matched.
+
+%\noindent \textbf{Merge 2016 to 2012:} Facilities in 2016 that have coordinates were firstly assigned corresponding 2002 admin names by GIS. Then general matching methods help matching 2,561 facilities across 2016 and 2012 datasets. After scrutinizing facilities with coordinates, we again relied on general matching methods for the rest of 2,802 facilities in the 2012 dataset and 3,647 in 2016 that don't have coordinates. In total, 3,799 facilities were found in both datasets.
+	
+%	\begin{table}[h!]
+%		\caption{Examples of name matching process}
+%		\begin{tabular}{@{}| c | c | c |@{}}
+%			\hline
+%			\textbf{name in 2006}                       & \textbf{name in 2012}           & \textbf{matching methods} \\ \hline
+%			st. france's capital gaba t.c. private hc ii & st francis capital clinic       & manual match                    \\
+%			yumbe town council orinji                   & yumbe charanga ward hc iii govt & manual match                    \\
+%			alleluah med. centre   &  Hallelujah Medical Clinic & manual match \\
+%			sir albert cook                             & sir albert cook clinic          & keyword-match    \\ 
+%		\hline      
+%		\end{tabular}
+%	\end{table}
+
+%	We firstly matched facilities that have coordinates after locating them in 2002 administions and assigning corresponding 2002 district, county, subcounty, parish names. Of about 4,000 in 2016 and 3,100 in 2012, only 1,800 directly matched. Afterwards, ~190 and ~450 were able to identified by fuzzy\_match and keyword\_match algorithm respectively. Then we went through a manual searching on the left 600 facilities with coordinates in 2012 dataset and found an additional match of 121 facilities.
+	
+%	After scrutinizing facilities with coordinates, we again relied on string matching methods for the rest of 2,802 facilities in the 2012 dataset and 3,647 in 2016 that don't have coordinates. Following the logics in merging 2006 and 2012, we cleaned the administrative unit names as a basic. Then, fuzzy\_match and keyword\_match algorithm helped identify 865 health facilities in 2016 that also existed in 2012. The rest were manually examined and 373 additional matches were found. 
+
+\noindent \textbf{Cross-check and supplement geocoding:} Using 2012 as the base year, we combined the above two matched and merged datasets (2006-merged-to-2012 dataset and 2016-merged-to-2012 dataset) together with the 2020 dataset, with in total around 9,500 facilities listed. The majority now has coordinates that could be used to assign a 2002 parish. For the rest that only have administrative unit names available, we used reverse-geocoding with Google Maps API to search for coordinates. By feeding in health facility names including "Health center, Uganda" string, Google Maps were able to return coordinates for a small amount of facilities. Results were double-checked by comparing provided admin unit names with parishes the coordinates lead to. Lastly, we manually searched for about 200 HC III / IV / V's for which we did not have exact coordinates. We were able to successfully identify 146 additional health facilities which we verified by cross-checking with provided district / subcounty / parish names. 
+
+%Accurately geolocating each facility to 2002 Uganda parishes is the next most important task. We follow seveval general rules in dealing with conflicting location information. Coordinates are considered more reliable than administrative name strings. Also, we think that data in more recent years is more accurate. This is helpful when one facility was given inconsistent coordinates in different years, but we have confidence that it should be the same facility because all other information includes administrative unit names, level, and ownership are the same. 
+
+%For around 3,200 facilities that we couldn't locate them back in 2002 administrative units, we applied two more methods. Firstly,  As a double check, we further mapped each facilities using these coordinates to 2002 units. If the district (admin1) level names don't match, we consider the coordinates inaccurate and dropped it. Seconly, string-matching were used such that 2006 parishes are matched to 2002's, 2011 and 2016 parishes to 2016's using the crosswalk of 2011\_to\_2016 Uganda parishes. Massive cleaning (in thousands) by either algorithms or our research assistants was devoted in matching each admin level across different datasets. 2016 parishes were afterwards matched to 2002 using our 2016-2002 crosswalk. 
+
+In the end, we successfully identified the location of around 7,100 facilities using coordinates, and located 2,400 additional facilities in terms of their 2002 parish using administrative names. Those facilities were assigned parish centroid coordinates. 
+ 
+\subsubsection{Health Access index construction}
+ 
+Based on the comprehensive geocoded health facility list containing 2006, 2011, 2016, and 2020 information, we constructed several parish-year variables for the 5 different levels of HC. We constructed three variables for HC I: the number of HC I; an indicator of whether there is at least one HC I (YES = 1, NO = 0); the number of HC I normalized by population at subcounty level. For HC II, we also normalized the number of HC II's in each subcounty by the population as an estimation of access. For HC III / IV / V where we have the most accurate coordinates, we constructed a measure of the shortest \textbf{Distance} from each parish's centroid to a facility and a measure of \textbf{Crowdedness} (the population served by the closet health center). Crowdedness is defined as the sum of population of all parishes that are closest to a given facility. 
+
+ %For example, Health center A in parish AA is the closest HC III to both parish AA and parish AB. Suppose that Parish AA has one other HC III besides Health Center A, parish AB has 3 HC III facilities in total. Then, the potential population served by Hospital A is calculated by the following formula: 
+ 
+ %\begin{equation}\label{eq:crowdedness}
+ %	population\_served = \frac{1}{2} * population\_of\_parish\_AA + \frac{1}{3 + 1} * population\_of\_parish\_AB
+ %\end{equation}
+ 
+% \noindent And this crowdedness value will be assigned to both Parish AA and parish AB becuase Health Center A is the closest HC III. Note that the number of HC III in parish AB was added one because we think that Health Center A is serving the population of Parish AB equally with the other three.
+ 
+% We implemented and tested a variety of approaches in generating health access latent variables. The process is explained using the following steps:
+%  
+% \begin{itemize}
+% 	\item \textbf{Step 1: Rescale variables} Distance and Crowdedness variables are rescaled by three different scalars: MinMax scalar ($\frac{data - Min}{Max - Min} * New \; Range$); Robust scalar ($\frac{data -  Median}{75\% \; quantile - 25 \% \; quantile}$); Standard scalar ($\frac{data - Mean}{Standard \; Deviation}$). These scalars are mainly used to modify variables range but do not change the shape of distribution.
+% 	
+% 	\item\textbf{Step 2: Inverse variable directions} We reserved variables' direction such that the larger the value, the better the outcome. In our case, the shorter the distance and the fewer population served by the closest health center, the better access. We inverted distance variable by a linear transformation:
+% 	
+% 	\begin{equation} \label{eq:pop1}
+% 		inversed \; data = Max - old \; data
+% 	\end{equation}
+% 
+% 	\noindent Besides this linear transformation, Crowdedness variable is also inverted by another method:
+% 	
+% 	\begin{equation} \label{eq:pop2}
+% 		inversed \; data = \frac{1}{constant + old \; data}
+% 	\end{equation}
+% 	\noindent Note that linear transformation maintains the variance-covariance relationships among HC III / IV / V. A constant is added in equation \ref{eq:pop2} for the purpose of ensuring positive values.
+% 	
+% 	\item\textbf{Step 3: Aggregate Distance and Crowdedness variables} In this step, we combined the transformed Distance and Crowdedness variables for the same level-year unit with 2 types of aggregation method: $\frac{Distance + Crowdedness}{2}$, or $Distance * Crowdedness$. Together with the two inverse methods, we created four different cases in this step:
+% 	
+% 	\begin{enumerate}
+% 		\item Aggregation by multiplication: $(Max - Distance) * (Max - Crowdedness)$;
+% 		\item Aggregation by multiplication: $\frac{Max - Distance}{Max + Crowdedness}$; 
+% 		\item Aggregation by average: $\frac{(Max - Distance) + (Max - Crowdedness)}{2}$;
+% 		\item Aggregation by average: $\frac{(Max - Distance) + (\frac{1}{Crowdedness + constant})}{2}$
+% 		\item No aggregation: Keep the original Distance and Crowdedness variables as separate.
+% 	\end{enumerate}
+% 
+% %\noindent Note that Aggregation #2 is normalizing the inversed Distance variable by Crowdedness.
+% 	
+% 	\item\textbf{Step 4: Combine all variables and construct indexes.} We extracted latent variables simply by computing a unweighted/weighted average. Three methods were used: unweigthed average; simple weighted average with integer weights from 1 to 5 (corresponding to HC I to V); inverse covariance matrix weighting. 
+% \end{itemize}
+%  
+% With a diverse combination of above methods, each parish-year has 42 potential indices. In order to better interpret results, they are all standardized to mean zero and standard deviation being one. 
+%  
+% To better evaluating each potential index, we first checked Cronbach's alpha for all possible combinations of the above variables. The dummy variable and indicator variable of HC I produced much larger Cronbach's Alpha compared to the count variables of HC I. So we excluded the count of HC I in Step 4. Also, Aggregation \# 4 outperformed the others in general with Cronbach's alpha above 0.5. By further testing correlation matrices of different indexes, we found that different scalars exerted very minimal differences and have extremely highly correlations close to 1. Correlations between indexes are also high (from 0.6 to 1).
+ 
+\subsubsection{Health utilization}
+
+We used the Uganda Demographic and Health Survey (DHS) to measure health services utilization, which is available for the three years of health facility data, 2006, 2011, and 2016.  We mainly used DHS's Kids Recode (KR) data and Geographic Data (GE) which is used to geo-locate each respondent. The unit of analysis of KR is each child under 5 years old born to an interviewed reproductive aged women (15 - 49). The KR dataset contains both the information related to the child such as immunization, nutrition, health condition, and information for the mother such as pre/post-natal care for each pregnancy. \textbf{Further, we also incorporated household possession of malaria-prevention nets from the Household Records (HR)} as additional variables appended to each kid. In total, we have 7,634 observations included in DHS 2006, 7,796 in 2011, and 15,277 in 2016. \textbf{We examined all possible statistics provided in DHS Guide to Statistics, selected questions that indicate people's utilization of health services and standardized them across 2006, 2011, 2016 DHS data because questions and variables have been modified across years. After testing correlation and cronbach's alpha, we categorized utilization variables into women's utilization and child's utilization \citep{magadi2007comparative,dimbuene2018women,gyimah2006challenges,yaya2020wealth,adhikari2016effect}: 
+\begin{itemize}
+	\item women's utilization: including maternal health, possesion of mosquito nets and Insecticide-Treated Net (ITN);
+	\item child's utilization: including child's vaccination, deworming, and iron supplements provision.
+\end{itemize}}
+
+
+\noindent For each kid in KR data, we calculated the ultimate utilization index as the simple average across all variables that include both its own utilization variables and its mother's maternal variables. Details about recoding each variables are explained in the following.
+\\
+
+For women's utilization, we recoded and generated the following variables: (1) \textbf{Tetanus injection before pregnancy:} takes the value "1" if the woman has received a tetanus injection before pregnancy; (2) \textbf{Tetanus injection during pregnancy:} takes the value "1" if the woman has received a tetanus injection during pregnancy; (3) \textbf{Adequate ANC visit:} takes the value of 1 if at least four antenatal (ANC) visits were made; (4) \textbf{ANC provider:} and (5) \textbf{Delivery assistance:} we consider the following categories "professional personnel" and assign 1 to this dummy variable: doctor, nurse / midwife, medical assistant/clinical officer, nursing aide / assistant; (6) \textbf{Places of ANC:} (7) \textbf{Places of Delivery:} Places of ANC and Places of Delivery variable are coded 1 if the ANC or delivery happened at government / private hospital, health center, and clinics, or other public / private sectors compared to residential houses; (8) \textbf{Household possession of mosquito net:} takes the value of 1 if the household have at least one mosquito net; (9) \textbf{Household possession of Insecticide-Treated Net:} takes the value of 1 if the household have at least one insecticide-treated net.
+
+For child's utilization, our primary indicator is whether a child was vaccination, received deworming medicine, and iron supplements. %Although WHO has a clear definition of “complete vaccination”: polio (4 doses administered at Birth, 6, 10, and 14 weeks), measles (administered at 9 months),Complete Bacillus Calmette Guerin (BCG) against tuberculosis (administered at Birth), and DTwPHibHep (DTP) against diphtheria, tetanus, pertussis, influenza, and hepatitis B (3 doses administered at 6, 10, and 14 weeks) \citep{Canavan2014}. Here, we adjusted it for the case of Uganda. Because in Uganda DHS, questions only about BCG (1 doses), DPT (3 doses), POLIO (3-4 doses), MCV (1 dose) are included for each child, there’s no record for HepB, pneumococcal, rotavirus, or second MCV dose. Therefore, in our analysis, 
+With regard to vaccination, we consider ``complete\_vaccination'' for children receiving 1 BCG, 3 DTP, 3 POLIO, 1 MCV before the age of 3. Following this, we focused on the following 4 individual indicators. (1) \textbf{BCG immunization:} takes a value of 1 if the child receives 1 dose of BCG; (2) \textbf{Complete DPT immunization:}  takes a value of 1 if the child receives 3 doses of DPT; (3) \textbf{Complete POLIO immunization:} takes a value of 1 if the child receives 3 doseS of POLIO; (4) \textbf{Complete MCV immunization:}  takes a value of 1 if the child receives 1 dose of MCV. (5) \textbf{Dewoming:} takes 1 if the child received deworming medication; (6) \textbf{Iron supplements:} takes 1 if the child recieved iron supplements.
+
+%Note that vaccinations received by children should be completed before 2 years old. In DHS, vaccination only covers children aged 12 - 35 months. Consequently, children above 3 years old (36 months+) don’t have any record in the survey data in vaccination related questions. This restriction left us with 5,758 observations in 2016, 2,867 in 2011, and 2,795 in 2006. 
+
+
+% \paragraph{Validate Health access index with Health utilization index}
+% 
+% We assigned the constructed parish-level health indexes to each individual based on its parish. We first checked the Pearson correlation between utilization score and health access indexes, then further tested their relationships with linear regression models. Our `best' performing index (using Cronbach's alpha) has a 0.17 Pearson correlation coefficient with our DHS-based health utilization index. 
+
+
+\newpage
+\subsection{Road Density}
+\label{SIsubsec:roaddata}
+
+We calculated the Speed-Weighted-Road-Density in capturing and describing road quality for each parish. It is defined as the ratio of total length of roads (km) to the area (km$^2$), weighted by the speed limit of each type (see Equation \ref{eq:road_density}).
+
+\begin{equation}\label{eq:road_density}
+	Weighted\_Road\_Density_{k} = \frac{\sum_{i=1}^{i=6}Length_{i} * Velocity_{i}}{\sum_{i=i}^{i=6}Velocity_{i}}  \div Area_{k}
+\end{equation}
+
+\noindent with k representing each parish, i is the road class from Highway to Trail / Track.
+
+%Road and traffic densities are commonly used as traffic-related exposure metrics in testing the potential relationships between transportation infrastructure and socioeconomics and socio-demographic variables \citep{rose2009weighted}. Many times, traffic volumn is directly embodied in Weighted\_Road\_Density (WRD) measure as weights. Road density is defined as the ratio of total length of roads (km) to the area (km$^2$). In the course of our analysis, we generated road density with parishes as the unit. 
+
+To calculate road density for each parish, We first extracted the length of roads in each road class that falls within each parish using geographic information systems (GIS), categorized by road classes (See Figure~\ref{fig:road_network}). We mainly used three shapefiles of Uganda road network. First one is the most recently updated (in 2020) road network shapefile extracted from OpenStreetMap by the	Humanitarian OpenStreetMap Team. \footnote{Shapefile can be downloaded at the Humanitarian Data Exchange (HDX) website \url{https://data.humdata.org/dataset/hotosm_uga_roads}}. The second road map is constructed by World Food Programme using OpenStreetMap and last updated in 2017, post-treatment period in our study.%\citep{road1}.
+\footnote{Shapefile can be downloaded at WFP website \url{https://geonode.wfp.org/layers/geonode:uga_trs_roads_osm}} The last one is from Global Roads Open Access Data Set gathered by NASA Socioeconomic Data and Applications Center (SEDAC), covering road information up to 2010 \citep{road2}. \footnote{Shapefile can be downloaded at NASA SEDAC website \url{https://sedac.ciesin.columbia.edu/data/set/groads-global-roads-open-access-v1}}
+
+\begin{figure}[H]
+	\caption{Road Network in Uganda}\label{fig:road_network}
+	\begin{subfigure}[h]{0.48\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/road_network_2010.pdf}
+		\caption{Road network in 2010}\label{fig:road_network_2010}
+	\end{subfigure}
+	\hspace{.1cm}
+	\begin{subfigure}[h]{0.48\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/road_network_2017.pdf}
+		\caption{Road network in 2017}\label{fig:road_network_2017}
+	\end{subfigure}%
+	\hspace{.1cm}
+	\begin{subfigure}[h]{0.48\linewidth}
+		\includegraphics[width=\linewidth]{figures_Ge/road_network_2020.pdf}
+		\caption{Road network in 2020}\label{fig:road_network_2020}
+	\end{subfigure}%
+	%\fnote{\footnotesize{Notes: The road network in 2010 is simi}}
+\end{figure}
+
+%\begin{figure}[h]{0.48\linewidth}
+%  \centering
+%	\caption{Road Network in Uganda}\label{fig:road_network_2020}
+%		\includegraphics[width=\linewidth]{figures_Ge/road_network_2020.pdf}
+%		\caption{Road network in 2020}\label{fig:road_network_2020}
+%	%\fnote{\footnotesize{Notes: The road network in 2010 is simi}}
+%\end{figure}
+
+There are mainly 6 types of road class in Uganda, from the best to the worst: Highway; Primary; Secondary; Tertiary; Residential or Local; Trail or Track. Very few pathways, private roads, and unspecified roads that are in the shapefiles are excluded in our calculation. The speed limit for each road class were generated by Carl Müller-Crepon (\citeyear{muller2021roads}) from Michelin website \url{www.viamichelin.com}. We recoded the speed of highways to that of the second category to maintain the rank order. % (see Figure~\ref{fig:speed}). Parish-level heatmaps are as follows (Figure~\ref{fig:road_density}):
+
+%{itemize}
+%	\setlength\itemsep{0em}
+%	\item Highway
+%	\item Primary
+%	\item Secondary
+%	\item Tertiary
+%	\item Residential / Local
+%	\item Trail / Track
+%\end{itemize}
+
+%\begin{figure}[h!]
+%	\centering
+%	\caption{Speed limit of different road classes}\label{fig:speed}
+%	\begin{subfigure}[h]{0.48\linewidth}
+	%	\includegraphics[width=\linewidth]{figures_Ge/speed.pdf}
+%	\end{subfigure}
+%\end{figure}
+
+%\begin{figure}[h!]
+%	\caption{Road Density in Uganda}\label{fig:road_density}
+%	\begin{subfigure}[h]{0.48\linewidth}
+%		\includegraphics[width=\linewidth]{figures_Ge/road_density_2010.pdf}
+%		\caption{Road density in 2010}\label{fig:road_density_2010}
+%	\end{subfigure}
+%	\hfill
+%	\begin{subfigure}[h]{0.48\linewidth}
+%		\includegraphics[width=\linewidth]{figures_Ge/road_density_2017.pdf}
+%		\caption{Road density in 2017}\label{fig:road_density_2017}
+%	\end{subfigure}%
+	%\fnote{\footnotesize{Notes: The road network in 2010 is simi}}
+%\end{figure}
+
+Further, we tested the Spearman's correlation between road density and our other measures: wealth index, nighttime light density, health access index.
+
+\begin{table}[h!]
+	\begin{center}
+		\begin{threeparttable}
+			\caption{Correlation}
+			\label{table:road_density_correlation}
+			\begin{tabular}{l c c c c c c}
+				\hline 
+				& \multicolumn{3}{c}{Road Density} \\
+				\cline{2-4} \\ [-1.5ex]
+				& 2010 & 2017 & 2020 \\
+				\hline
+				\\[-2.2ex] 
+				%\multicolumn{3}{l}{\textbf{Spearman Correlation}} \\
+				%\\[-2.2ex]
+				Secondary School        & $0.191^{***}$    &         $0.349^{***}$ &   $0.256^{***}$     \\
+				Primary School       & $0.034^{***}$   &      $0.182^{***}$   &         $0.110^{***}$     \\
+				Health Index        & $0.177^{***}$ &     $0.486^{***}$      &         $0.524^{***}$   \\
+				\hline
+			\end{tabular}
+			\begin{tablenotes}[flushleft]
+				\item $^{***}p<0.001$, $^{**}p<0.01$, $^*p<0.05$.
+			\end{tablenotes}
+		\end{threeparttable}
+	\end{center}
+\end{table}
+
+
+\newpage
+\subsection{Afrobarometer Survey Data}
+\label{SIsubsec:AB}
+
+<<exposure_heatmap_ab, eval = TRUE, echo = FALSE, tidy=TRUE, fig.width = 8, fig.height = 8, out.width= ".87\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="This set of maps shows across our study years, the locations of refugee settlements (blue) and Afrobarometer respondents (orange) shaded by their refugee presence levels to the settlements.">>=
+
+## Raw maps
+ab_01 <- ggplot(country) + 
+  geom_sf(fill = "white") + 
+  geom_sf(data = refsites %>% 
+              filter(Name_setlm %in% open_2001), fill = "blue",
+            alpha = .8) +
+  geom_sf(data = refsites_kitgum_okollo %>% 
+              filter(Name %in% open_2001), fill = "blue", alpha = .8) +
+  geom_point(data = df_ab %>% filter(year == 2001), 
+             aes(longitude, latitude, colour = nearest_exposure_plus_20)) + 
+  scale_colour_gradient(
+      low = "white", high = "#D55E00", na.value = "grey") + 
+  labs(title = "Round 3 (2005)") + 
+  theme_map() +
+  theme(legend.position = "none")
+
+ab_06 <- ggplot(country) + 
+  geom_sf(fill = "white") + 
+  geom_sf(data = refsites %>% 
+              filter(Name_setlm %in% open_2006), fill = "blue",
+            alpha = .8) +
+  geom_sf(data = refsites_kitgum_okollo %>% 
+              filter(Name %in% open_2006), fill = "blue", alpha = .8) +
+  geom_point(data = df_ab %>% filter(year == 2006), 
+             aes(longitude, latitude, colour = nearest_exposure_plus_20)) + 
+  scale_colour_gradient(
+      low = "white", high = "#D55E00", na.value = "grey") + 
+  labs(title = "Round 4 (2008)") + 
+  theme_map() +
+  theme(legend.position = "none")
+
+ab_11 <- ggplot(country) + 
+  geom_sf(fill = "white") +
+  geom_sf(data = refsites %>% 
+              filter(Name_setlm %in% open_2011), fill = "blue",
+            alpha = .8) +
+  geom_sf(data = refsites_kitgum_okollo %>% 
+              filter(Name %in% open_2011), fill = "blue", alpha = .8) +
+  geom_point(data = df_ab %>% filter(year == 2011), 
+             aes(longitude, latitude, colour = nearest_exposure_plus_20)) + 
+  scale_colour_gradient(
+      low = "white", high = "#D55E00", na.value = "grey") + 
+  labs(title = "Round 5 (2011)") + 
+  theme_map() +
+  theme(legend.position = "none")
+
+ab_16 <- ggplot(country) + 
+  geom_sf(fill = "white") + 
+  geom_sf(data = refsites %>% 
+              filter(Name_setlm %in% open_2016), fill = "blue",
+            alpha = .8) +
+  geom_sf(data = refsites_kitgum_okollo %>% 
+              filter(Name %in% open_2016), fill = "blue", alpha = .8) +
+  geom_point(data = df_ab %>% filter(year == 2016), 
+             aes(longitude, latitude, colour = nearest_exposure_plus_20)) +
+  scale_colour_gradient(
+      low = "white", high = "#D55E00", na.value = "grey") + 
+  labs(title = "Rounds 6 and 7 (2016)") + 
+  theme_map() +
+  theme(legend.position = "none")
+
+ab_20 <- ggplot(country) + 
+  geom_sf(fill = "white") + 
+  geom_sf(data = refsites %>% 
+              filter(Name_setlm %in% open_2020), fill = "blue",
+            alpha = .8) +
+  geom_sf(data = refsites_kitgum_okollo %>% 
+              filter(Name %in% open_2020), fill = "blue", alpha = .2) +
+  geom_sf(data = refsites_mungula %>% 
+              filter(Name_setlm %in% open_2020), fill = "blue", alpha = .2) +
+  geom_point(data = df_ab %>% filter(year == 2020), 
+             aes(longitude, latitude, colour = nearest_exposure_plus_20)) + 
+  scale_colour_gradient(
+      low = "white", high = "#D55E00", na.value = "grey") + 
+  labs(title = "Round 8 (2019)") + 
+  theme_map() +
+  theme(legend.position = "none")
+
+## Plot
+(ab_01 + ab_06 + ab_11) / (ab_16 + ab_20) 
+
+@
+
+We further explored nationally representative Afrobarometer (AB) survey data to analyze support for the president, the NRM party, the government; attitudes towards migrants and migration policy; and perceptions of insecurity. We utilized geocoded AB data from Round 3 (2005, N = \Sexpr{table(df_ab$year)[1]}), Round 4 (2008, N = \Sexpr{table(df_ab$year)[2]}), Round 5 (2011, N = \Sexpr{table(df_ab$year)[3]}), Round 6 and 7 (2015 and 2016, N = \Sexpr{table(df_ab$year)[4]}), and Round 8 (2019, N = \Sexpr{table(df_ab$year)[5]}). Figure \ref{fig:exposure_heatmap_ab} shows the geographic distribution of the respondents (orange) by round, shaded by their refugee presence levels to the refugee settlements (blue). 
+
+Questions and response coding vary across years. We selected pertinent questions (as displayed in Table \ref{tab:AB}) and standardized the responses across different rounds. For migrants as neighbors, migrants can move freely, born to a non-Ugandan, and able to naturalize, we rescaled the variables so that higher values are more pro-migrant and supportive of open citizenship. For felt unsafe in community, feared crime, higher values means more fear. 
+
+\begin{table}[h!]
+	\begin{center}
+		\begin{threeparttable}
+			\caption{Afrobarometer variables}
+			\label{tab:AB}
+			\begin{small}
+			\begin{tabular}{|c|l|}
+				\hline
+				\textbf{Categories}             & \textbf{Variables}                                                                                                                                                                                                                                                                                                                      \\ \hline
+				\textbf{Administrative}    & \begin{tabular}[l]{@{}c@{}}round, year, respondent number, region, district\end{tabular}                                                                                                                                                                                                                                             \\ \hline
+				\textbf{Demographic}       & \begin{tabular}[l]{@{}c@{}}urban or rural, ethnicity, religion, gender, \\ race, age, occupation, education, language\end{tabular}                                                                                                                                                                                                      \\ \hline
+				\textbf{Wealth}                 & \begin{tabular}[l]{@{}l@{}}living condition, living condition compared to others, radio, \\ television, motorcycle/vehicle, computer, mobile phone,\\  enough food/water/cooking fuel/cash income/school expenses, \\ have internet access, have phone services, roof material, shelter type\end{tabular}                                \\ \hline
+				\textbf{Govt Performance} & \begin{tabular}[l]{@{}l@{}}improve economy/poor people's condition/health services/education services/\\ water condition/food supply/road condition/electricity supply, \\ create job opportunities, stabilize price,  protect forest and river,\\ empower women, decrease inequality/crime/corruption/hiv-aids/conflicts\end{tabular} \\ \hline
+				\textbf{Migration Attitudes}      & \begin{tabular}[l]{@{}l@{}}migrants as neighbors, migrants can move freely,\\
+				born to a non-Ugandan, able to naturalize \end{tabular}   \\ \hline
+				\textbf{Insecurity}      & \begin{tabular}[l]{@{}l@{}}
+				felt unsafe in community, fear crime \end{tabular}   \\ \hline
+			\end{tabular}
+			\end{small}
+		\end{threeparttable}
+	\end{center}
+\end{table}
+
+\noindent All outcome variables are standardized with mean 0 and standard deviation being 1. We also generated a wealth index and a government performance index using categorical principle component analysis. Variables that were included in indexes are slightly different for the four rounds because some variables are not available in certain rounds. 
+
+
+\subsection{ACLED Violence data}
+
+We collected violent events data in one year prior to our study years (2001, 2006, 2011, 2016, 2020) from the Armed Conflict Location \& Event Data Project (ACLED). These events were categorized in major groups including riots, battles, protests, and violence and further in more detailed sub-event groups. We assigned 2002 parish ID to each violent event using GIS and summarized the number of events for each main event group. Further, we generated the dichotomous outcome variable \textit{any\_violent\_event} which takes 1 if any of the following 5 main events happened in that parish-year:violence against civilians, riot, attack, mob violence, violent event. 
+
+
+% \clearpage
+% \newpage
+% \section{Lags and Leads for Development Outcomes}
+% \label{SIsec:lagsleads}
+
+<<parallel_trends_did, eval = FALSE, echo = FALSE, tidy=TRUE, fig.width = 8, fig.height = 5, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="This figure shows the lags and leads for the main development outcomes.">>=
+
+## Create data
+df_plot_par <- df_pol %>% 
+  dplyr::select(parish_id, year, nearest_exposure_plus_20_binary, 
+                public_primary_schools_per_thousand_kids_parish_level,
+                private_primary_schools_per_thousand_kids_parish_level,
+                public_per_thousand_kid,
+                private_per_thousand_kid,
+                health_access_index4,
+                all_of(control_list))
+
+df_plot_par_2020 <- df_plot_par %>%
+  filter(year == "2020") %>%
+  dplyr::select(parish_id, nearest_exposure_plus_20_binary) %>%
+  rename(exposure_2020 = nearest_exposure_plus_20_binary)
+df_plot_par <- df_plot_par %>%
+  inner_join(df_plot_par_2020) %>%
+  pivot_longer(-c(parish_id, year, nearest_exposure_plus_20_binary,
+                  exposure_2020, all_of(control_list))) 
+
+## Non-health outcomes
+#df_partrend <- sprintf("value ~ year * nearest_exposure_plus_20_binary + %s | parish_id | 0 | parish_id", controls)
+df_partrend_health <- sprintf("value ~ year * nearest_exposure_plus_20_binary + %s | parish_id | 0 | parish_id", 
+                              controls_health)
+df_partrend_school <- sprintf("value ~ year * nearest_exposure_plus_20_binary + %s | parish_id | 0 | parish_id", 
+                              controls_school)
+
+df_plot_par_sum <- df_plot_par %>%
+  mutate(year = fct_relevel(year, "2011", "2001", "2006", "2016","2020")) %>%
+  group_by(name) %>%
+  do({
+    f <- if_else(all(.$name == "health_access_index4"),
+                 df_partrend_health, df_partrend_school)
+    
+    felm(as.formula(f), data = .) %>%
+      tidy(conf.int = TRUE) %>%
+      filter(grepl("nearest_exposure_plus_20_binary", term))
+  })
+
+df_plot_par_sum <- bind_rows(df_plot_par_sum) %>%
+  mutate(year = case_when(grepl("2001", term)~"2001",
+                          grepl("2006", term)~"2006",
+                          grepl("2016", term)~"2016",
+                          grepl("2020", term)~"2020",
+                          TRUE~NA_character_)) %>%
+  filter(!is.na(year))
+
+df_plot_par_sum <- bind_rows(
+  df_plot_par_sum, 
+  tibble(name = unique(df_plot_par_sum$name),
+         year = "2011", estimate = 0)) %>%
+  mutate(name = case_when(
+    name == "health_access_index4"~"Health Access",
+    name == "public_primary_schools_per_thousand_kids_parish_level"~"Public Pri School Access",
+    name == "private_primary_schools_per_thousand_kids_parish_level"~"Private Pri School Access",
+    name == "public_per_thousand_kid"~"Public Sec School Access",
+    name == "private_per_thousand_kid"~"Private Sec School Access",
+    ),
+    name = as.factor(name),
+  name = fct_relevel(name, 
+                     "Public Pri School Access",
+                     "Private Pri School Access",
+                     "Public Sec School Access",
+                     "Private Sec School Access",
+                     "Health Access"))
+
+## Plot
+
+df_plot_par_sum %>% 
+  ggplot(aes(year, estimate)) + 
+  geom_point() + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0) + 
+  geom_vline(aes(xintercept = 3.66), lty = "dashed", colour = "gray30") +
+  geom_hline(aes(yintercept = 0), lty = "dashed", colour = "gray30") + 
+  facet_wrap(~name, scales = "free_y") + 
+  theme_bw() + 
+  theme(legend.position = "bottom")
+
+@
+
+
+%\newpage
+\section{Yearly Public School Results (2001-2020)} 
+\label{SIsec:edu_yearly}
+
+
+<<yearly_edu, eval = TRUE, echo = FALSE, tidy=TRUE, fig.width = 12, fig.height = 10, out.width= "1\\linewidth", fig.align='center', warning=FALSE, message=FALSE, strip.white=TRUE, fig.cap="Effect of refugee presence on public primary and secondary school access at the yearly level. The results are from OLS DiD models for parishes within 150km of any refuge settlement, interacting Nearest + 20km Refugee Presence (time varying) with year, interacting controls with year, including parish and region-year fixed effects. Standard errors are clustered at the parish level. Estimates include 95$\\%$ CIs.">>=
+
+# Yearly formula
+exposure_edu_year <- paste0("I((year == '", 2002:2020, "')*nearest_exposure_plus_20)")
+did_ctr_str_edu_year <- paste0(
+  " ~ nearest_exposure_plus_20 + ", 
+  paste(exposure_edu_year, collapse = "+"),
+  "+", controls_edu_yearly, " | parish_id + region_year | 0 | parish_id"
+)
+
+# Run models
+edu_yearly_pubprimary <- felm(
+    as.formula(paste0("public_primary_schools_per_thousand_kids", did_ctr_str_edu_year)), 
+    data = df_edu %>% dplyr::filter(min_distance_01 < 150),
+    cmethod = "reghdfe"
+  ) %>%
+  tidy(conf.int = TRUE) %>%
+  filter(grepl("exposure", term)) %>%
+  mutate(outcome = "public_primary_schools_per_thousand_kids")
+
+edu_yearly_public <- felm(
+    as.formula(paste0("public_per_thousand_kid", did_ctr_str_edu_year)), 
+    data = df_edu %>% dplyr::filter(min_distance_01 < 150),
+    cmethod = "reghdfe"
+  ) %>%
+  tidy(conf.int = TRUE) %>%
+  filter(grepl("exposure", term)) %>%
+  mutate(outcome = "public_per_thousand_kid")
+
+bind_rows(edu_yearly_pubprimary, edu_yearly_public) %>%
+  mutate(
+    term = case_when(
+      term == "nearest_exposure_plus_20"~"Baseline Exposure",
+      TRUE~paste("Exposure x", gsub(".*?([0-9]+).*", "\\1", term))
+    ),
+    outcome = case_when(
+      outcome == "public_primary_schools_per_thousand_kids"~"Public Pri School Access",
+      outcome == "public_per_thousand_kid"~"Public Sec School Access"
+    ),
+    outcome = as.factor(outcome),
+    outcome = fct_relevel(outcome, "Public Pri School Access", "Public Sec School Access")
+  ) %>%
+  ggplot(aes(term, estimate)) + 
+  geom_hline(aes(yintercept = 0), lty = "dashed") + 
+  geom_vline(aes(xintercept = 1.5), lty = "dashed", colour = "black") + 
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high), 
+    width = 0, lwd = .7, colour = "#ba0000"
+  ) + 
+  geom_label(aes(label = round(estimate, 3)), colour = "#ba0000") +
+  facet_wrap(~outcome, scales = "free", ncol = 1) +
+  scale_x_discrete(
+    breaks = c("Baseline Exposure", paste("Exposure x", seq(2001, 2020, by = 2))),
+    labels = function(x)str_wrap(str_replace_all(x, "foo" , " "), width = 10)
+  ) + 
+  labs(y = "Estimate") + 
+  theme_bw() + 
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+@
+
+\newpage
+\section{Robustness Checks}
+\label{SIsec:tables}
+
+<<run_models_main, eval = TRUE, echo = FALSE, tidy=TRUE, warning=FALSE, message=FALSE>>=
+
+## formulas
+did_ctr_str_school <- paste0("%s ~ exposure + I((year == '2006')*exposure) + I((year == '2011')*exposure) + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_school, " | parish_id + region_year | 0 | parish_id")
+did_ctr_str_hc <- paste0("%s ~ exposure + I((year == '2006')*exposure) + I((year == '2011')*exposure) + I((year == '2016')*exposure) +", controls_health, " | parish_id + region_year | 0 | parish_id")
+did_ctr_str_road <- paste0("%s ~ exposure + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_road, " | parish_id + region_year | 0 | parish_id")
+
+## -------------------------------------------------
+## All possible specifications - non-health outcomes
+## -------------------------------------------------
+model_specs_main <- expand.grid(
+  sample = c("all"),
+  outcome = c(
+    "public_primary_schools_per_thousand_kids_parish_level",
+    "private_primary_schools_per_thousand_kids_parish_level",
+    "private_per_thousand_kid",
+    "public_per_thousand_kid",
+    "health_access_index4",
+    "road_density_standardized",
+    "PGindex_mean",
+    "minmax_count_pop_hcii_standardized", 
+    "multiply4_minmax_hciii_standardized", 
+    "multiply4_minmax_hciv_standardized", 
+    "multiply4_minmax_hcv_standardized"
+  ),
+  indep_var = c("nearest_exposure", "nearest_exposure_plus_20", 
+                "nearest_exposure_plus_50"),
+  distance_to_camp = c(100, 150, 200, NA),
+  stringsAsFactors = FALSE
+)
+
+registerDoMC(detectCores() - 1)
+run_all_models_main <- foreach(i = 1:nrow(model_specs_main)) %do% {
+  
+  ## Select outcome
+  outcome <- model_specs_main$outcome[i]
+    
+  ## Select distance
+  nearest_camp_distance <- model_specs_main$distance_to_camp[i]
+  if(is.na(nearest_camp_distance)){
+    nearest_camp_distance <- "full"
+  }
+    
+  ## Select main iv
+  if(model_specs_main$sample[i] == "2000"){
+    main_indep <- paste0(model_specs_main$indep_var[i], "_01")
+  }else{
+    main_indep <- model_specs_main$indep_var[i]
+  }
+  df_pol$exposure <- df_pol %>% dplyr::pull(main_indep)
+    
+  ## Select correct formula
+  if(grepl("road_density", outcome)){
+    form_str <- sprintf(did_ctr_str_road, outcome)
+  }else if(grepl("minmax", outcome) & grepl("_hc", outcome)){
+    form_str <- sprintf(did_ctr_str_hc, outcome)
+  } else{
+    form_str <- sprintf(did_ctr_str_school, outcome)
+  }
+    
+  ## Run model
+  if(nearest_camp_distance != "full"){
+    df_mod <- df_pol %>% dplyr::filter(min_distance_01 < nearest_camp_distance)
+  }else{
+    df_mod <- df_pol
+  }
+  
+  model_out <- felm(
+    as.formula(form_str), 
+    data = df_mod,
+    cmethod = "reghdfe"
+  )
+  
+  # Get difference in coefficients
+  if(grepl("minmax", outcome) & grepl("_hc", outcome)){
+    diff1611 <- coef(model_out)['I((year == \"2016\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se1611 <- sqrt(
+      vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                      'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2011\") * exposure)']
+      )
+    model_out[["diff_coef1611"]] <- data.frame(diff = diff1611, se = se1611)
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    model_out[["diff_coef2011"]] <- data.frame(diff = NA, se = NA)
+  } else if(any(names(coef(model_out)) == "I((year == \"2011\") * exposure)")){
+    # difference between 2016 and 2011
+    diff1611 <- coef(model_out)['I((year == \"2016\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se1611 <- sqrt(
+      vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                      'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2011\") * exposure)']
+      )
+    model_out[["diff_coef1611"]] <- data.frame(diff = diff1611, se = se1611)
+    
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2016\") * exposure)']
+      )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    
+    # difference between 2020 and 2011
+    diff2011 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se2011 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                      'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2011\") * exposure)']
+      )
+    model_out[["diff_coef2011"]] <- data.frame(diff = diff2011, se = se2011)
+  }else{
+    # This is for road
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2016\") * exposure)']
+      )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    model_out[["diff_coef1611"]] <- data.frame(diff = NA, se = NA)
+    model_out[["diff_coef2011"]] <- data.frame(diff = NA, se = NA)
+  }
+  
+  # Store summary of other model for informal benchmarking
+  f.dx <- as.character(model_out$formula)
+  if(grepl("minmax", outcome) & grepl("_hc", outcome)){
+    f.dx <- gsub(paste("I((year == \"2016\") * exposure)", "+"), "", f.dx, fixed = TRUE)
+    f.dx <- gsub(".*?~", paste0("I((year == \"2016\") * exposure)", "~"), f.dx)
+    model_out[["sensemakr_param"]] <- "I((year == \"2016\") * exposure)"
+    model_out[["benchmark_param"]] <- "I(unemployment_rate_census2002 * (year == \"2016\"))"
+  }else{
+    f.dx <- gsub(paste("I((year == \"2020\") * exposure)", "+"), "", f.dx, fixed = TRUE)
+    f.dx <- gsub(".*?~", paste0("I((year == \"2020\") * exposure)", "~"), f.dx)
+    model_out[["sensemakr_param"]] <- "I((year == \"2020\") * exposure)"
+    model_out[["benchmark_param"]] <- "I(unemployment_rate_census2002 * (year == \"2020\"))"
+  }
+  model_out_dx <- felm(
+    as.formula(f.dx),
+    data = df_mod,
+    cmethod = "reghdfe"
+  )
+  model_out[["dx.sens"]] <- model_out_dx
+    
+  return(model_out)
+
+}
+
+model_specs_main <- model_specs_main %>%
+  mutate(
+    distance_to_camp = coalesce(
+      as.character(model_specs_main$distance_to_camp),
+      "All"),
+    indep_var = case_when(indep_var == "nearest_exposure"~"Nearest",
+                          indep_var == "nearest_exposure_plus_20"~"Nearest + 20km",
+                          indep_var == "nearest_exposure_plus_50"~"Nearest + 50km",
+                          indep_var == "nearest_exposure_plus_100"~"Nearest + 100km")
+  )
+
+# Extract difference + standard error
+diffs_vec1611_main <- map_dbl(run_all_models_main, ~.x[["diff_coef1611"]]$diff)
+sediffs_vec1611_main <- map_dbl(run_all_models_main, ~.x[["diff_coef1611"]]$se)
+
+diffs_vec2011_main <- map_dbl(run_all_models_main, ~.x[["diff_coef2011"]]$diff)
+sediffs_vec2011_main <- map_dbl(run_all_models_main, ~.x[["diff_coef2011"]]$se)
+
+diffs_vec2016_main <- map_dbl(run_all_models_main, ~.x[["diff_coef2016"]]$diff)
+sediffs_vec2016_main <- map_dbl(run_all_models_main, ~.x[["diff_coef2016"]]$se)
+
+# Names crosswalk
+dev_names_xwalk <- data.frame(outcome = unique(model_specs_main$outcome)) %>%
+  mutate(outcome_clean = case_when(
+      outcome == "public_primary_schools_per_thousand_kids_parish_level"~"Public Pri",
+      outcome == "public_per_thousand_kid"~"Public Sec",
+      outcome == "road_density_standardized"~"Roads",
+      outcome == "PGindex_mean"~"PG Index",
+      outcome == "minmax_count_pop_hcii_standardized"~"HC 2", 
+      outcome == "multiply4_minmax_hciii_standardized"~"HC 3", 
+      outcome == "multiply4_minmax_hciv_standardized"~"HC 4", 
+      outcome == "multiply4_minmax_hcv_standardized"~"HC 5",
+      TRUE~outcome
+      ))
+
+@
+
+<<util-analysis, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+# Set up controls
+control_list = c("age","live_urban","wealth_score","higher_education")
+
+years <- c("(year == '2011')", "(year == '2016')")
+ctr_grid <- expand.grid(control = control_list, year = years)
+ctr_grid$full_var <- paste0("I(", ctr_grid$control, "*", ctr_grid$year, ")")
+controls_spec2 <- paste0(ctr_grid$full_var, collapse = "+")
+
+did_spec2 = paste0("%s ~ exposure + I((year == '2011')*exposure) + I((year == '2016')*exposure)+", controls_spec2, " | region + year | 0 | 0")
+
+# Grid over measures
+model_specs2 <- expand.grid(
+  sample = c("all"),
+  outcomes = c("utilization_child", "utilization_women", "utilization"),
+  indep_var = c("nearest_exposure","nearest_exposure_plus_20",
+             "nearest_exposure_plus_50"),
+  distance_to_camp = c(100, 150, 200, NA),
+  stringsAsFactors = FALSE
+)
+
+#### Run all models
+registerDoMC(detectCores() - 1)
+run_all_models_spec2 = foreach(i = 1:nrow(model_specs2)) %do% {
+  
+  ## Select outcome
+  outcome = model_specs2$outcomes[i]
+  
+  ## Select distance
+  nearest_camp_distance = model_specs2$distance_to_camp[i]
+  if(is.na(nearest_camp_distance)){nearest_camp_distance ="full"}
+  
+  ## Select main indep var
+  indep = model_specs2$indep_var[i]
+  
+  ## Select correct formula
+  form_str = sprintf(did_spec2, outcome)
+  
+  ## Select correct dataset
+  if(nearest_camp_distance != "full"){
+    df_mod = df_util %>% dplyr::filter(min_distance < nearest_camp_distance)
+  }else{df_mod = df_util}
+  
+  ## Drop na
+  df_mod = df_mod %>% drop_na(outcome)
+  df_mod$exposure = df_mod %>% dplyr::pull(indep)
+  
+  model_out = felm(as.formula(form_str), data = df_mod, cmethod = "reghdfe")
+  
+  # Get difference in coefficients
+  if(any(names(coef(model_out)) == "I((year == \"2011\") * exposure)")){
+    diff <- coef(model_out)['I((year == \"2016\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se <- sqrt(
+      vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                      'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2016\") * exposure)',
+                          'I((year == \"2011\") * exposure)']
+      )
+    model_out[["diff_coef"]] <- data.frame(diff = diff, se = se)
+  }else{
+    model_out[["diff_coef"]] <- data.frame(diff = NA, se = NA)
+  }
+  
+  return(model_out)
+}
+
+
+### We only need the regression table for spec3
+cmap_exposure <- list('exposure' = "Refugee Presence",
+             'I((year == "2011") * exposure)' = "Refugee Presence x 2011",
+             'I((year == "2016") * exposure)' = "Refugee Presence x 2016")
+
+cmap_both<- list('exposure' = "Access / Presence",
+             'I((year == "2011") * exposure)' = "Access / Presence x 2011",
+             'I((year == "2016") * exposure)' = "Access / Presence x 2016")
+
+# Extract difference + standard error
+diffs_vec1611_util <- map_dbl(run_all_models_spec2, ~.x[["diff_coef"]]$diff)
+sediffs_vec1611_util <- map_dbl(run_all_models_spec2, ~.x[["diff_coef"]]$se)
+
+model_specs2 <- model_specs2 %>%
+  mutate(
+    distance_to_camp = coalesce(
+      as.character(model_specs2$distance_to_camp),
+      "All"),
+    indep_var = case_when(indep_var == "nearest_exposure"~"Nearest",
+                          indep_var == "nearest_exposure_plus_20"~"Nearest + 20km",
+                          indep_var == "nearest_exposure_plus_50"~"Nearest + 50km",
+                          indep_var == "nearest_exposure_plus_100"~"Nearest + 100km")
+  )
+
+@
+
+<<run_models_ab, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+## -------------------------------------------------
+## All possible specifications - non-health outcomes
+## -------------------------------------------------
+
+## formulas
+did_ctr_str_ab <- paste0("%s ~ exposure + I((year == '2006')*exposure) + I((year == '2011')*exposure) + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_ab_full, " | region + year | 0 | 0")
+did_ctr_str_ab_migattitude <- paste0("%s ~ exposure + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_ab_migattitude, " | region + year | 0 | 0")
+did_ctr_str_ab_migmovement <- paste0("%s ~ exposure + I((year == '2020')*exposure) +", controls_ab_migmovement, " | region + year | 0 | 0")
+did_crt_str_ab_road <- paste0("%s ~ exposure + I((year == '2011')*exposure) + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_ab_road, " | region + year | 0 | 0")
+cs_ctr_str_ab <- paste0("%s ~ exposure +", controls_ab_cs, " | region | 0 | 0")
+
+model_specs_ab <- expand.grid(
+  sample = c("all"),
+  outcome = c(
+    "migrants_attitude_standardized",
+    "migrants_movement_standardized",
+    "feel_unsafe_standardized",
+    "feared_crime_standardized",
+    "presidential_approval_standardized",
+    "partisanship_nrm_standardized", 
+    "trust_president_standardized", 
+    "trust_rulling_party_standardized",
+    "born_non_ugandans_standardized",
+    "foreigner_residents_standardized",
+    "wealth_index", 
+    "gvmt_perf_index",
+    "improve_education",
+    "improve_road", 
+    "improve_health"
+  ),
+  indep_var = c("nearest_exposure", "nearest_exposure_plus_20", 
+                "nearest_exposure_plus_50"),
+  distance_to_camp = c(100, 150, 200, NA),
+  stringsAsFactors = FALSE
+)
+
+# migrant attitude - 2011, 2016, 2020
+# migrant movement - 2016, 2020
+# feel unsafe - 2011, 2016, 2020
+# feared crime - all 5
+# presidential approval - all 5
+# partisanship nrm - all 5
+# trust president - all 5
+# trust ruing paryt - all 5
+# wealth index all 5
+# gov performance all 5
+# born non ugandan - 2011
+# foreigner residents - 2011
+# improve roads - 2006, 2011, 2016, 2020
+# improve health - all 5
+# improve education - all 5
+
+#registerDoMC(detectCores() - 1)
+#registerDoMC(detectCores() - 1)
+run_all_models_ab <- foreach(i = 1:nrow(model_specs_ab)) %do% {
+  
+  ## Select outcome
+  outcome <- model_specs_ab$outcome[i]
+    
+  ## Select distance
+  nearest_camp_distance <- model_specs_ab$distance_to_camp[i]
+  if(is.na(nearest_camp_distance)){
+    nearest_camp_distance <- "full"
+  }
+    
+  ## Select main iv
+  main_indep <- model_specs_ab$indep_var[i]
+  df_ab$exposure <- df_ab %>% dplyr::pull(main_indep)
+    
+  ## Select correct formula
+  if(outcome %in% c("migrants_attitude_standardized", "feel_unsafe_standardized")){
+    form_str <- sprintf(did_ctr_str_ab_migattitude, outcome)
+  }else if(outcome == "migrants_movement_standardized"){
+    form_str <- sprintf(did_ctr_str_ab_migmovement, outcome)
+  }else if(outcome %in% c("born_non_ugandans_standardized",
+                          "foreigner_residents_standardized")){
+    form_str <- sprintf(cs_ctr_str_ab, outcome)
+  }else if(outcome == "improve_road"){
+    form_str <- sprintf(did_crt_str_ab_road, outcome)
+  }else{
+    form_str <- sprintf(did_ctr_str_ab, outcome) 
+  }
+ 
+  ## Run model
+  if(nearest_camp_distance != "full"){
+    df_mod <- df_ab %>% dplyr::filter(min_distance < nearest_camp_distance)
+  }else{
+    df_mod <- df_ab
+  }
+  model_out <- felm(
+    as.formula(form_str), 
+    data = df_mod,
+    cmethod = "reghdfe"
+  )
+  
+  # Get difference in coefficients
+  if(any(names(coef(model_out)) == "I((year == \"2011\") * exposure)")){
+    # difference between 2016 and 2011
+    diff1611 <- coef(model_out)['I((year == \"2016\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se1611 <- sqrt(
+      vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                      'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2016\") * exposure)',
+                          'I((year == \"2011\") * exposure)']
+      )
+    model_out[["diff_coef1611"]] <- data.frame(diff = diff1611, se = se1611)
+    
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                        'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2016\") * exposure)']
+    )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+
+    # difference between 2020 and 2011
+    diff2011 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se2011 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                        'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2011\") * exposure)']
+    )
+    model_out[["diff_coef2011"]] <- data.frame(diff = diff2011, se = se2011)
+  }else if(any(names(coef(model_out)) == "I((year == \"2016\") * exposure)")){
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                        'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2016\") * exposure)']
+    )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    model_out[["diff_coef1611"]] <- data.frame(diff = NA, se = NA)
+    model_out[["diff_coef2011"]] <- data.frame(diff = NA, se = NA)
+  }else{
+    model_out[["diff_coef2016"]] <- data.frame(diff = NA, se = NA)
+    model_out[["diff_coef1611"]] <- data.frame(diff = NA, se = NA)
+    model_out[["diff_coef2011"]] <- data.frame(diff = NA, se = NA)
+  }
+    
+  return(model_out)
+
+}
+
+model_specs_ab <- model_specs_ab %>%
+  mutate(
+    distance_to_camp = coalesce(
+      as.character(model_specs_ab$distance_to_camp),
+      "All"),
+    indep_var = case_when(indep_var == "nearest_exposure"~"Nearest",
+                          indep_var == "nearest_exposure_plus_20"~"Nearest + 20km",
+                          indep_var == "nearest_exposure_plus_50"~"Nearest + 50km",
+                          indep_var == "nearest_exposure_plus_100"~"Nearest + 100km")
+  )
+
+# Extract difference + standard error
+diffs_vec1611_ab <- map_dbl(run_all_models_ab, ~.x[["diff_coef1611"]]$diff)
+sediffs_vec1611_ab <- map_dbl(run_all_models_ab, ~.x[["diff_coef1611"]]$se)
+
+diffs_vec2011_ab <- map_dbl(run_all_models_ab, ~.x[["diff_coef2011"]]$diff)
+sediffs_vec2011_ab <- map_dbl(run_all_models_ab, ~.x[["diff_coef2011"]]$se)
+
+diffs_vec2016_ab <- map_dbl(run_all_models_ab, ~.x[["diff_coef2016"]]$diff)
+sediffs_vec2016_ab <- map_dbl(run_all_models_ab, ~.x[["diff_coef2016"]]$se)
+
+# Names crosswalk
+ab_names_xwalk <- data.frame(outcome = unique(model_specs_ab$outcome)) %>%
+  mutate(outcome_clean = case_when(
+      outcome == "migrants_attitude_standardized"~"Neighbors",
+        outcome == "migrants_movement_standardized"~"Move Freely",
+        outcome == "born_non_ugandans_standardized"~"Born Non-Ugandan",
+        outcome == "foreigner_residents_standardized"~"Naturalize",
+        outcome == "feel_unsafe_standardized"~"Felt Unsafe",
+        outcome == "feared_crime_standardized"~"Feared Crime",
+        outcome == "any_violent_event"~"Any Violent Event (ACLED)",
+      TRUE~outcome
+      ))
+
+@
+
+<<run_models_acled, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+## -------------------------------------------------
+## All possible specifications - non-health outcomes
+## -------------------------------------------------
+
+## formulas
+did_ctr_str <- paste0("%s ~ exposure + I((year == '2006')*exposure) + I((year == '2011')*exposure) + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls, " | parish_id + region_year | 0 | parish_id")
+
+model_specs_acled <- expand.grid(
+  sample = c("all"),
+  outcome = c("any_violent_event"),
+  indep_var = c("nearest_exposure", "nearest_exposure_plus_20", 
+                "nearest_exposure_plus_50"),
+  distance_to_camp = c(100, 150, 200, NA),
+  stringsAsFactors = FALSE
+)
+
+#registerDoMC(detectCores() - 1)
+run_all_models_acled <- foreach(i = 1:nrow(model_specs_acled)) %do% {
+  
+  ## Select outcome
+  outcome <- model_specs_acled$outcome[i]
+    
+  ## Select distance
+  nearest_camp_distance <- model_specs_acled$distance_to_camp[i]
+  if(is.na(nearest_camp_distance)){
+    nearest_camp_distance <- "full"
+  }
+    
+  ## Select main iv
+  if(model_specs_acled$sample[i] == "2000"){
+    main_indep <- paste0(model_specs_acled$indep_var[i], "_01")
+  }else{
+    main_indep <- model_specs_acled$indep_var[i]
+  }
+  df_pol$exposure <- df_pol %>% dplyr::pull(main_indep)
+    
+  ## Select correct formula
+  if(grepl("health_access_", outcome)){
+   form_str <- sprintf(did_ctr_str_health, outcome) 
+  }else if(grepl("road_density", outcome)){
+    form_str <- sprintf(did_ctr_str_road, outcome)
+  }else if(grepl("wealth_index_standardized", outcome)){
+    form_str <- sprintf(did_ctr_str_wealth, outcome)
+  }else{
+   form_str <- sprintf(did_ctr_str, outcome) 
+  }
+    
+  ## Run model
+  if(nearest_camp_distance != "full"){
+    df_mod <- df_pol %>% dplyr::filter(min_distance_01 < nearest_camp_distance)
+  }else{
+    df_mod <- df_pol
+  }
+  
+  if(grepl("wealth_index_standardized", outcome)){
+    df_mod <- df_mod %>% filter(year %in% c("2001", "2011"))
+  }
+  model_out <- felm(
+    as.formula(form_str), 
+    data = df_mod,
+    cmethod = "reghdfe"
+  )
+  
+  # Get difference in coefficients
+  if(any(names(coef(model_out)) == "I((year == \"2011\") * exposure)")){
+    # difference between 2016 and 2011
+    diff1611 <- coef(model_out)['I((year == \"2016\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se1611 <- sqrt(
+      vcov(model_out)['I((year == \"2016\") * exposure)',
+                      'I((year == \"2016\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                        'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2016\") * exposure)',
+                          'I((year == \"2011\") * exposure)']
+    )
+    model_out[["diff_coef1611"]] <- data.frame(diff = diff1611, se = se1611)
+    
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                        'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2016\") * exposure)']
+    )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    
+    # difference between 2020 and 2011
+    diff2011 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2011\") * exposure)']
+    se2011 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2011\") * exposure)',
+                        'I((year == \"2011\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2011\") * exposure)']
+    )
+    model_out[["diff_coef2011"]] <- data.frame(diff = diff2011, se = se2011)
+  }else{
+    # This is for road
+    # difference between 2020 and 2016
+    diff2016 <- coef(model_out)['I((year == \"2020\") * exposure)'] - 
+      coef(model_out)['I((year == \"2016\") * exposure)']
+    se2016 <- sqrt(
+      vcov(model_out)['I((year == \"2020\") * exposure)',
+                      'I((year == \"2020\") * exposure)'] +
+        vcov(model_out)['I((year == \"2016\") * exposure)',
+                        'I((year == \"2016\") * exposure)'] - 
+        2*vcov(model_out)['I((year == \"2020\") * exposure)',
+                          'I((year == \"2016\") * exposure)']
+    )
+    model_out[["diff_coef2016"]] <- data.frame(diff = diff2016, se = se2016)
+    model_out[["diff_coef1611"]] <- data.frame(diff = NA, se = NA)
+    model_out[["diff_coef2011"]] <- data.frame(diff = NA, se = NA)
+  }
+
+    
+  return(model_out)
+
+}
+
+model_specs_acled <- model_specs_acled %>%
+  mutate(
+    distance_to_camp = coalesce(
+      as.character(model_specs_acled$distance_to_camp),
+      "All"),
+    indep_var = case_when(indep_var == "nearest_exposure"~"Nearest",
+                          indep_var == "nearest_exposure_plus_20"~"Nearest + 20km",
+                          indep_var == "nearest_exposure_plus_50"~"Nearest + 50km",
+                          indep_var == "nearest_exposure_plus_100"~"Nearest + 100km")
+  )
+
+# Extract difference + standard error
+diffs_vec1611_acled <- map_dbl(run_all_models_acled, ~.x[["diff_coef1611"]]$diff)
+sediffs_vec1611_acled <- map_dbl(run_all_models_acled, ~.x[["diff_coef1611"]]$se)
+
+diffs_vec2011_acled <- map_dbl(run_all_models_acled, ~.x[["diff_coef2011"]]$diff)
+sediffs_vec2011_acled <- map_dbl(run_all_models_acled, ~.x[["diff_coef2011"]]$se)
+
+diffs_vec2016_acled <- map_dbl(run_all_models_acled, ~.x[["diff_coef2016"]]$diff)
+sediffs_vec2016_acled <- map_dbl(run_all_models_acled, ~.x[["diff_coef2016"]]$se)
+
+
+@
+
+This section shows the regression tables for the main results with alternative specifications.  
+
+%\newpage
+\subsection{Alternative Refugee Presence Measures} 
+\label{SIsec:altpresence}
+
+In this section, we use Nearest and Nearest + 50km refugee presence measures.
+
+<<altpresence_dev, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+## NEAREST
+inds <- which(model_specs_main$sample == "all" & 
+                model_specs_main$outcome %in% c("PGindex_mean",
+                                                "public_primary_schools_per_thousand_kids_parish_level",
+                                                "public_per_thousand_kid",
+                                                "road_density_standardized",
+                                                "minmax_count_pop_hcii_standardized",
+                                                "multiply4_minmax_hciii_standardized", 
+                                                "multiply4_minmax_hciv_standardized",
+                                                "multiply4_minmax_hcv_standardized") &
+                model_specs_main$indep_var == "Nearest" &
+                model_specs_main$distance_to_camp %in% c("150"))
+
+ind_dev_plot <- which(model_specs2$outcomes == "utilization" & 
+                        model_specs2$indep_var == "Nearest" &
+                model_specs2$distance_to_camp %in% c("150"))
+
+print(texreg(
+  c(run_all_models_main[inds], run_all_models_spec2[ind_dev_plot]),
+  custom.coef.map = cmap,
+  custom.model.names = c(
+    dev_names_xwalk$outcome_clean[match(model_specs_main$outcome[inds], dev_names_xwalk$outcome)],
+    "Health Util"
+  ),
+  custom.gof.rows = list(
+    "Diff 2016-2011" = c(diffs_vec1611_main[inds], diffs_vec1611_util[ind_dev_plot]),
+    "SE Diff 2016-2011" = c(sediffs_vec1611_main[inds], sediffs_vec1611_util[ind_dev_plot]),
+    "Diff 2020-2011" = c(diffs_vec2011_main[inds], NA),
+    "SE Diff 2020-2011" = c(sediffs_vec2011_main[inds], NA),
+    "Diff 2020-2016" = c(diffs_vec2016_main[inds], NA),
+    "SE Diff 2020-2016" = c(sediffs_vec2016_main[inds], NA),
+    "Presence Measure" = c(rep("Nearest", length(inds)+1)),
+    "Sample Distance (km)" = c(model_specs_main$distance_to_camp[inds], model_specs2$distance_to_camp[ind_dev_plot]),
+    "Controls x Year" = rep("Yes", length(inds)+1)
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Public Goods outcomes: For parishes within 150km, OLS models interacting Nearest refugee presence (time-varying) with year, interacting controls with year, and including parish FE and region-year FE, with standard errors clustered at the parish level.",
+  label = "tab:dev_did_nearest",
+  use.packages = FALSE,
+  scalebox='0.65',
+  float.pos = "H"))
+
+### NEAREST + 50KM
+inds <- which(model_specs_main$sample == "all" & 
+                model_specs_main$outcome %in% c("PGindex_mean",
+                                                "public_primary_schools_per_thousand_kids_parish_level",
+                                                "public_per_thousand_kid",
+                                                "road_density_standardized",
+                                                "minmax_count_pop_hcii_standardized",
+                                                "multiply4_minmax_hciii_standardized", 
+                                                "multiply4_minmax_hciv_standardized",
+                                                "multiply4_minmax_hcv_standardized") &
+                model_specs_main$indep_var == "Nearest + 50km" &
+                model_specs_main$distance_to_camp %in% c("150"))
+
+ind_dev_plot <- which(model_specs2$outcomes == "utilization" & 
+                        model_specs2$indep_var ==  "Nearest + 50km" &
+                model_specs2$distance_to_camp %in% c("150"))
+
+print(texreg(
+  c(run_all_models_main[inds], run_all_models_spec2[ind_dev_plot]),
+  custom.coef.map = cmap,
+  custom.model.names = c(
+    dev_names_xwalk$outcome_clean[match(model_specs_main$outcome[inds], dev_names_xwalk$outcome)],
+    "Health Util"
+  ),
+  custom.gof.rows = list(
+    "Diff 2016-2011" = c(diffs_vec1611_main[inds], diffs_vec1611_util[ind_dev_plot]),
+    "SE Diff 2016-2011" = c(sediffs_vec1611_main[inds], sediffs_vec1611_util[ind_dev_plot]),
+    "Diff 2020-2011" = c(diffs_vec2011_main[inds], NA),
+    "SE Diff 2020-2011" = c(sediffs_vec2011_main[inds], NA),
+    "Diff 2020-2016" = c(diffs_vec2016_main[inds], NA),
+    "SE Diff 2020-2016" = c(sediffs_vec2016_main[inds], NA),
+    "Presence Measure" = c(rep("Nearest+50", length(inds)+1)),
+    "Sample Distance (km)" = c(model_specs_main$distance_to_camp[inds], model_specs2$distance_to_camp[ind_dev_plot]),
+    "Controls x Year" = rep("Yes", length(inds)+1)
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Public Goods outcomes: For parishes within 150km, OLS models interacting Nearest + 50km refugee presence (time-varying) with year, interacting controls with year, and including parish FE and region-year FE, with standard errors clustered at the parish level.",
+  label = "tab:dev_did_nearest50",
+  use.packages = FALSE,
+  scalebox='0.65',
+  float.pos = "H"))
+
+@
+
+<<altpresence_ab, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+## NEAREST
+inds <- which(model_specs_ab$sample == "all" & 
+                model_specs_ab$outcome %in% c("migrants_attitude_standardized",
+                                              "migrants_movement_standardized",
+                                              "born_non_ugandans_standardized",
+                                              "foreigner_residents_standardized",
+                                              "feel_unsafe_standardized",
+                                              "feared_crime_standardized") &
+                model_specs_ab$indep_var == "Nearest" &
+                model_specs_ab$distance_to_camp %in% c("150"))
+
+print(texreg(
+  run_all_models_ab[inds],
+  custom.coef.map = cmap,
+  custom.model.names = ab_names_xwalk$outcome_clean[match(model_specs_ab$outcome[inds], ab_names_xwalk$outcome)],
+  custom.gof.rows = list(
+    "Diff 2016-2011" = diffs_vec1611_ab[inds], 
+    "SE Diff 2016-2011" = sediffs_vec1611_ab[inds],
+    "Diff 2020-2011" = diffs_vec2011_ab[inds],
+    "SE Diff 2020-2011" = sediffs_vec2011_ab[inds], 
+    "Diff 2020-2016" = diffs_vec2016_ab[inds],
+    "SE Diff 2020-2016" = sediffs_vec2016_ab[inds],
+    "Presence Measure" = c(rep("Nearest", length(inds))),
+    "Sample Distance (km)" = model_specs_ab$distance_to_camp[inds], 
+    "Controls x Year" = rep("Yes", length(inds))
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Afrobarometer outcomes: For respondents within 150km, OLS models interacting Nearest refugee presence (time-varying) with year, interacting controls with year, and including region and year FE.",
+  label = "tab:ab_did_nearest",
+  use.packages = FALSE,
+  scalebox='0.65',
+  float.pos = "H"))
+
+## NEAREST + 50 KM
+inds <- which(model_specs_ab$sample == "all" & 
+                model_specs_ab$outcome %in% c("migrants_attitude_standardized",
+                                              "migrants_movement_standardized",
+                                              "born_non_ugandans_standardized",
+                                              "foreigner_residents_standardized",
+                                              "feel_unsafe_standardized",
+                                              "feared_crime_standardized") &
+                model_specs_ab$indep_var == "Nearest + 50km" &
+                model_specs_ab$distance_to_camp %in% c("150"))
+
+print(texreg(
+  run_all_models_ab[inds],
+  custom.coef.map = cmap,
+  custom.model.names = ab_names_xwalk$outcome_clean[match(model_specs_ab$outcome[inds], ab_names_xwalk$outcome)],
+  custom.gof.rows = list(
+    "Diff 2016-2011" = diffs_vec1611_ab[inds], 
+    "SE Diff 2016-2011" = sediffs_vec1611_ab[inds],
+    "Diff 2020-2011" = diffs_vec2011_ab[inds],
+    "SE Diff 2020-2011" = sediffs_vec2011_ab[inds], 
+    "Diff 2020-2016" = diffs_vec2016_ab[inds],
+    "SE Diff 2020-2016" = sediffs_vec2016_ab[inds],
+    "Presence Measure" = c(rep("Nearest+50", length(inds))),
+    "Sample Distance (km)" = model_specs_ab$distance_to_camp[inds], 
+    "Controls x Year" = rep("Yes", length(inds))
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Afrobarometer outcomes: For respondents within 150km, OLS models interacting Nearest + 50km refugee presence (time-varying) with year, interacting controls with year, and including region and year FE.",
+  label = "tab:ab_did_nearest50",
+  use.packages = FALSE,
+  scalebox='0.65',
+  float.pos = "H"))
+
+@
+
+\newpage
+\subsection{Alternative Sample Radii} 
+\label{SIsec:altradii}
+
+For the alternative sample radii, we show results using parishes within 100km from a refugee settlement at baseline, 200km, and all parishes. 
+
+<<altradii_dev, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+## 100 radius
+inds <- which(model_specs_main$sample == "all" & 
+                model_specs_main$outcome %in% c("PGindex_mean",
+                                                "public_primary_schools_per_thousand_kids_parish_level",
+                                                "public_per_thousand_kid",
+                                                "road_density_standardized",
+                                                "minmax_count_pop_hcii_standardized",
+                                                "multiply4_minmax_hciii_standardized", 
+                                                "multiply4_minmax_hciv_standardized",
+                                                "multiply4_minmax_hcv_standardized") &
+                model_specs_main$indep_var == "Nearest + 20km" &
+                model_specs_main$distance_to_camp %in% c("100"))
+
+ind_dev_plot <- which(model_specs2$outcomes == "utilization" & 
+                        model_specs2$indep_var == "Nearest + 20km" &
+                model_specs2$distance_to_camp %in% c("100"))
+
+print(texreg(
+  c(run_all_models_main[inds], run_all_models_spec2[ind_dev_plot]),
+  custom.coef.map = cmap,
+  custom.model.names = c(
+    dev_names_xwalk$outcome_clean[match(model_specs_main$outcome[inds], dev_names_xwalk$outcome)],
+    "Health Util"
+  ),
+  custom.gof.rows = list(
+    "Diff 2016-2011" = c(diffs_vec1611_main[inds], diffs_vec1611_util[ind_dev_plot]),
+    "SE Diff 2016-2011" = c(sediffs_vec1611_main[inds], sediffs_vec1611_util[ind_dev_plot]),
+    "Diff 2020-2011" = c(diffs_vec2011_main[inds], NA),
+    "SE Diff 2020-2011" = c(sediffs_vec2011_main[inds], NA),
+    "Diff 2020-2016" = c(diffs_vec2016_main[inds], NA),
+    "SE Diff 2020-2016" = c(sediffs_vec2016_main[inds], NA),
+    "Presence Measure" = c(rep("Nearest+20", length(inds)+1)),
+    "Sample Distance (km)" = c(model_specs_main$distance_to_camp[inds], model_specs2$distance_to_camp[ind_dev_plot]),
+    "Controls x Year" = rep("Yes", length(inds)+1)
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Public Goods outcomes: For parishes within 100km, OLS models interacting Nearest + 20km refugee presence (time-varying) with year, interacting controls with year, and including parish FE and region-year FE, with standard errors clustered at the parish level.",
+  label = "tab:dev_did_100radius",
+  use.packages = FALSE,
+  scalebox='0.65',
+  float.pos = "H"))
+
+### 200km
+inds <- which(model_specs_main$sample == "all" & 
+                model_specs_main$outcome %in% c("PGindex_mean",
+                                                "public_primary_schools_per_thousand_kids_parish_level",
+                                                "public_per_thousand_kid",
+                                                "road_density_standardized",
+                                                "minmax_count_pop_hcii_standardized",
+                                                "multiply4_minmax_hciii_standardized", 
+                                                "multiply4_minmax_hciv_standardized",
+                                                "multiply4_minmax_hcv_standardized") &
+                model_specs_main$indep_var == "Nearest + 20km" &
+                model_specs_main$distance_to_camp %in% c("200"))
+
+ind_dev_plot <- which(model_specs2$outcomes == "utilization" & 
+                        model_specs2$indep_var ==  "Nearest + 20km" &
+                model_specs2$distance_to_camp %in% c("200"))
+
+print(texreg(
+  c(run_all_models_main[inds], run_all_models_spec2[ind_dev_plot]),
+  custom.coef.map = cmap,
+  custom.model.names = c(
+    dev_names_xwalk$outcome_clean[match(model_specs_main$outcome[inds], dev_names_xwalk$outcome)],
+    "Health Util"
+  ),
+  custom.gof.rows = list(
+    "Diff 2016-2011" = c(diffs_vec1611_main[inds], diffs_vec1611_util[ind_dev_plot]),
+    "SE Diff 2016-2011" = c(sediffs_vec1611_main[inds], sediffs_vec1611_util[ind_dev_plot]),
+    "Diff 2020-2011" = c(diffs_vec2011_main[inds], NA),
+    "SE Diff 2020-2011" = c(sediffs_vec2011_main[inds], NA),
+    "Diff 2020-2016" = c(diffs_vec2016_main[inds], NA),
+    "SE Diff 2020-2016" = c(sediffs_vec2016_main[inds], NA),
+    "Presence Measure" = c(rep("Nearest+20", length(inds)+1)),
+    "Sample Distance (km)" = c(model_specs_main$distance_to_camp[inds], model_specs2$distance_to_camp[ind_dev_plot]),
+    "Controls x Year" = rep("Yes", length(inds)+1)
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Public Goods outcomes: For parishes within 200km, OLS models interacting Nearest + 20km refugee presence (time-varying) with year, interacting controls with year, and including parish FE and region-year FE, with standard errors clustered at the parish level.",
+  label = "tab:dev_did_200radius",
+  use.packages = FALSE,
+  scalebox='0.65',
+  float.pos = "H"))
+
+### ALL
+inds <- which(model_specs_main$sample == "all" & 
+                model_specs_main$outcome %in% c("PGindex_mean",
+                                                "public_primary_schools_per_thousand_kids_parish_level",
+                                                "public_per_thousand_kid",
+                                                "road_density_standardized",
+                                                "minmax_count_pop_hcii_standardized",
+                                                "multiply4_minmax_hciii_standardized", 
+                                                "multiply4_minmax_hciv_standardized",
+                                                "multiply4_minmax_hcv_standardized") &
+                model_specs_main$indep_var == "Nearest + 20km" &
+                model_specs_main$distance_to_camp %in% c("All"))
+
+ind_dev_plot <- which(model_specs2$outcomes == "utilization" & 
+                        model_specs2$indep_var ==  "Nearest + 20km" &
+                model_specs2$distance_to_camp %in% c("All"))
+
+print(texreg(
+  c(run_all_models_main[inds], run_all_models_spec2[ind_dev_plot]),
+  custom.coef.map = cmap,
+  custom.model.names = c(
+    dev_names_xwalk$outcome_clean[match(model_specs_main$outcome[inds], dev_names_xwalk$outcome)],
+    "Health Util"
+  ),
+  custom.gof.rows = list(
+    "Diff 2016-2011" = c(diffs_vec1611_main[inds], diffs_vec1611_util[ind_dev_plot]),
+    "SE Diff 2016-2011" = c(sediffs_vec1611_main[inds], sediffs_vec1611_util[ind_dev_plot]),
+    "Diff 2020-2011" = c(diffs_vec2011_main[inds], NA),
+    "SE Diff 2020-2011" = c(sediffs_vec2011_main[inds], NA),
+    "Diff 2020-2016" = c(diffs_vec2016_main[inds], NA),
+    "SE Diff 2020-2016" = c(sediffs_vec2016_main[inds], NA),
+    "Presence Measure" = c(rep("Nearest+20", length(inds)+1)),
+    "Sample Distance (km)" = c(model_specs_main$distance_to_camp[inds], model_specs2$distance_to_camp[ind_dev_plot]),
+    "Controls x Year" = rep("Yes", length(inds)+1)
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Public Goods outcomes: For all parishes, OLS models interacting Nearest + 20km refugee presence (time-varying) with year, interacting controls with year, and including parish FE and region-year FE, with standard errors clustered at the parish level.",
+  label = "tab:dev_did_allradius",
+  use.packages = FALSE,
+  scalebox='0.65',
+  float.pos = "H"))
+
+@
+
+<<altradii_ab, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+## 100km
+inds <- which(model_specs_ab$sample == "all" & 
+                model_specs_ab$outcome %in% c("migrants_attitude_standardized",
+                                              "migrants_movement_standardized",
+                                              "born_non_ugandans_standardized",
+                                              "foreigner_residents_standardized",
+                                              "feel_unsafe_standardized",
+                                              "feared_crime_standardized") &
+                model_specs_ab$indep_var == "Nearest + 20km" &
+                model_specs_ab$distance_to_camp %in% c("100"))
+
+print(texreg(
+  run_all_models_ab[inds],
+  custom.coef.map = cmap,
+  custom.model.names = ab_names_xwalk$outcome_clean[match(model_specs_ab$outcome[inds], ab_names_xwalk$outcome)],
+  custom.gof.rows = list(
+    "Diff 2016-2011" = diffs_vec1611_ab[inds], 
+    "SE Diff 2016-2011" = sediffs_vec1611_ab[inds],
+    "Diff 2020-2011" = diffs_vec2011_ab[inds],
+    "SE Diff 2020-2011" = sediffs_vec2011_ab[inds], 
+    "Diff 2020-2016" = diffs_vec2016_ab[inds],
+    "SE Diff 2020-2016" = sediffs_vec2016_ab[inds],
+    "Presence Measure" = c(rep("Nearest+20", length(inds))),
+    "Sample Distance (km)" = model_specs_ab$distance_to_camp[inds], 
+    "Controls x Year" = rep("Yes", length(inds))
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Afrobarometer outcomes: For respondents within 100km, OLS models interacting Nearest + 20km refugee presence (time-varying) with year, interacting controls with year, and including region and year FE.",
+  label = "tab:ab_did_100radius",
+  use.packages = FALSE,
+  scalebox='0.65',
+  float.pos = "H"))
+
+## 200km
+inds <- which(model_specs_ab$sample == "all" & 
+                model_specs_ab$outcome %in% c("migrants_attitude_standardized",
+                                              "migrants_movement_standardized",
+                                              "born_non_ugandans_standardized",
+                                              "foreigner_residents_standardized",
+                                              "feel_unsafe_standardized",
+                                              "feared_crime_standardized") &
+                model_specs_ab$indep_var == "Nearest + 20km" &
+                model_specs_ab$distance_to_camp %in% c("200"))
+
+print(texreg(
+  run_all_models_ab[inds],
+  custom.coef.map = cmap,
+  custom.model.names = ab_names_xwalk$outcome_clean[match(model_specs_ab$outcome[inds], ab_names_xwalk$outcome)],
+  custom.gof.rows = list(
+    "Diff 2016-2011" = diffs_vec1611_ab[inds], 
+    "SE Diff 2016-2011" = sediffs_vec1611_ab[inds],
+    "Diff 2020-2011" = diffs_vec2011_ab[inds],
+    "SE Diff 2020-2011" = sediffs_vec2011_ab[inds], 
+    "Diff 2020-2016" = diffs_vec2016_ab[inds],
+    "SE Diff 2020-2016" = sediffs_vec2016_ab[inds],
+    "Presence Measure" = c(rep("Nearest+20", length(inds))),
+    "Sample Distance (km)" = model_specs_ab$distance_to_camp[inds], 
+    "Controls x Year" = rep("Yes", length(inds))
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Afrobarometer outcomes: For respondents within 200km, OLS models interacting Nearest + 20km refugee presence (time-varying) with year, interacting controls with year, and including region and year FE.",
+  label = "tab:ab_did_200radius",
+  use.packages = FALSE,
+  scalebox='0.65',
+  float.pos = "H"))
+
+## 200km
+inds <- which(model_specs_ab$sample == "all" & 
+                model_specs_ab$outcome %in% c("migrants_attitude_standardized",
+                                              "migrants_movement_standardized",
+                                              "born_non_ugandans_standardized",
+                                              "foreigner_residents_standardized",
+                                              "feel_unsafe_standardized",
+                                              "feared_crime_standardized") &
+                model_specs_ab$indep_var == "Nearest + 20km" &
+                model_specs_ab$distance_to_camp %in% c("All"))
+
+print(texreg(
+  run_all_models_ab[inds],
+  custom.coef.map = cmap,
+  custom.model.names = ab_names_xwalk$outcome_clean[match(model_specs_ab$outcome[inds], ab_names_xwalk$outcome)],
+  custom.gof.rows = list(
+    "Diff 2016-2011" = diffs_vec1611_ab[inds], 
+    "SE Diff 2016-2011" = sediffs_vec1611_ab[inds],
+    "Diff 2020-2011" = diffs_vec2011_ab[inds],
+    "SE Diff 2020-2011" = sediffs_vec2011_ab[inds], 
+    "Diff 2020-2016" = diffs_vec2016_ab[inds],
+    "SE Diff 2020-2016" = sediffs_vec2016_ab[inds],
+    "Presence Measure" = c(rep("Nearest+20", length(inds))),
+    "Sample Distance (km)" = model_specs_ab$distance_to_camp[inds], 
+    "Controls x Year" = rep("Yes", length(inds))
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Afrobarometer outcomes: For all respondents, OLS models interacting Nearest + 20km refugee presence (time-varying) with year, interacting controls with year, and including region and year FE.",
+  label = "tab:ab_did_allradius",
+  use.packages = FALSE,
+  scalebox='0.65',
+  float.pos = "H"))
+
+@
+
+
+\newpage
+\subsection{Including a District Time Trend}
+\label{SIsec:districttimetrend}
+
+These models include an additional district time trend. 
+
+<<districttimetrend, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+df_pol$year_numeric <- as.numeric(df_pol$year)
+df_util$year_numeric <- as.numeric(df_util$year)
+
+## formulas
+did_ctr_str_school_vary <- paste0("%s ~ exposure + I((year == '2006')*exposure) + I((year == '2011')*exposure) + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_school, " | parish_id + year_n:as.factor(district) + region_year | 0 | parish_id")
+did_ctr_str_hc_vary <- paste0("%s ~ exposure + I((year == '2006')*exposure) + I((year == '2011')*exposure) + I((year == '2016')*exposure) +", controls_health, " | parish_id + year_n:as.factor(district) + region_year | 0 | parish_id")
+did_ctr_str_road_vary <- paste0("%s ~ exposure + I((year == '2016')*exposure) + I((year == '2020')*exposure) +", controls_road, " | parish_id + year_n:as.factor(district) + region_year | 0 | parish_id")
+
+did_spec2_vary = paste0("%s ~ exposure + I((year == '2011')*exposure) + I((year == '2016')*exposure)+", controls_spec2, " | year_n:as.factor(district) + region | 0 | 0")
+
+# Models
+outcomes <- c("public_primary_schools_per_thousand_kids_parish_level", "public_per_thousand_kid", "road_density_standardized", "PGindex_mean", "minmax_count_pop_hcii_standardized", "multiply4_minmax_hciii_standardized", "multiply4_minmax_hciv_standardized", "multiply4_minmax_hcv_standardized")
+
+varyslope_models <- foreach(i = outcomes) %do% {
+  
+  if(grepl("road_density", i)){
+    form_str <- sprintf(did_ctr_str_road_vary, i)
+  }else if(grepl("minmax", i) & grepl("_hc", i)){
+    form_str <- sprintf(did_ctr_str_hc_vary, i)
+  } else{
+    form_str <- sprintf(did_ctr_str_school_vary, i)
+  }
+  
+    return(felm(
+      as.formula(form_str),
+      data = df_pol %>% 
+        mutate(year_numeric = year_numeric - min(year_numeric),
+               parish_id = as.factor(parish_id)) %>%
+        filter(min_distance_01 < 150) %>%
+        dplyr::select(-exposure) %>%
+        rename(exposure = nearest_exposure_plus_20,
+               year_n = year_numeric),
+      cmethod = "reghdfe"
+    ))
+  }
+
+varyslope_models_util <- felm(
+  as.formula(sprintf(did_spec2_vary, "utilization")),
+  data = df_util %>% 
+    mutate(year_numeric = year_numeric - min(year_numeric)) %>%
+    filter(min_distance < 150) %>%
+    rename(exposure = nearest_exposure_plus_20,
+           year_n = year_numeric),
+    cmethod = "reghdfe"
+)
+  
+
+print(texreg(
+  c(varyslope_models, list(varyslope_models_util)),
+  custom.coef.map = cmap,
+  custom.model.names = c(dev_names_xwalk$outcome_clean[match(outcomes, dev_names_xwalk$outcome)], "Health Util"),
+  custom.gof.rows = list(
+    "Presence Measure" = c(rep("Nearest+20", length(varyslope_models) + 1)),
+    "Sample Distance (km)" = c(rep("150", length(varyslope_models) + 1)),
+    "Controls x Year" = rep("Yes", length(varyslope_models) + 1)
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+    caption = "Regression table for Public Goods outcomes: For respondents within 150km, OLS models interacting Nearest + 20km refugee presence (time-varying) with year, interacting controls with year, and including parish FE, region-year FE, and a district time trend, with standard errors clustered at the parish level.",
+  label = "tab:districttimetrend",
+  use.packages = FALSE,
+  scalebox='0.6',
+  float.pos = "H"))
+@
+
+
+%\newpage
+\subsection{Two Period Binary Treatment DiD}
+\label{SIsec:twoperiod}
+
+This section shows the results for public goods outcomes using a standard DiD specification: two period (pre-2014 and post-2014) with a binary measure of refugee presence: Nearest + 20km cutoff at the median. 
+
+<<twoperiod, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+control_list <- c(
+  "population_census2002", "average_age_census2002", 
+  "proportion_male_census2002",
+  "literacy_rate_census2002",
+  "unemployment_rate_census2002", 
+  "agriculture_share_census2002", "coethnic_share_census2002",
+  "wealth_index_census2002",
+  "any_violent_event_census2002",
+  "distance_to_nearest_oil_well_in_km",
+  "borderdist", "roaddist", "capitoldist"
+)
+
+df_plot_par <- df_pol %>% 
+  dplyr::select(parish_id, year, region, nearest_exposure_plus_20_binary, 
+                road_density_standardized, 
+                public_primary_schools_per_thousand_kids_parish_level_standardized,
+                public_per_thousand_kid_standardized,
+                PGindex_mean,
+                minmax_count_pop_hcii_standardized, 
+                multiply4_minmax_hciii_standardized, 
+                multiply4_minmax_hciv_standardized, 
+                multiply4_minmax_hcv_standardized,
+                all_of(control_list), min_distance_01 )
+df_plot_par_2020 <- df_plot_par %>%
+  filter(year == "2020") %>%
+  dplyr::select(parish_id, nearest_exposure_plus_20_binary) %>%
+  rename(exposure_2020 = nearest_exposure_plus_20_binary)
+df_plot_par_2016 <- df_plot_par %>%
+  filter(year == "2016") %>%
+  dplyr::select(parish_id, nearest_exposure_plus_20_binary) %>%
+  rename(exposure_2016 = nearest_exposure_plus_20_binary)
+df_plot_par <- df_plot_par %>%
+  inner_join(df_plot_par_2020) %>%
+  inner_join(df_plot_par_2016) %>%
+  mutate(time_fe = case_when(year == "2020"~"post",
+                             year == "2016"~"post",
+                             TRUE~"pre"),
+         ## Is it correct? Yes, we need to have all post treatment years (2016, 2020) to be 1
+         exposure = case_when(year == "2020"~exposure_2020,
+                              year == "2016"~exposure_2016,
+                              TRUE~as.factor("bin0")))
+
+## ----------
+## Run models
+## ----------
+model_specs <- expand.grid(
+  sample = c("all"),
+  outcome = c("public_primary_schools_per_thousand_kids_parish_level_standardized",
+              "public_per_thousand_kid_standardized",
+              "road_density_standardized",
+    "minmax_count_pop_hcii_standardized", 
+    "multiply4_minmax_hciii_standardized", 
+    "multiply4_minmax_hciv_standardized", 
+    "multiply4_minmax_hcv_standardized",
+              "PGindex_mean"),
+  distance_to_camp = c(150),
+  stringsAsFactors = FALSE
+)
+
+run_all_models <- foreach(i = 1:nrow(model_specs)) %do% {
+  
+  ## Select outcome
+  outcome <- model_specs$outcome[i]
+  
+  if(grepl("minmax", outcome)){
+    f <- paste0("%s ~ exposure + ", paste0(controls_health, collapse = "+"),
+                "| time_fe + parish_id + region | 0 | parish_id")
+  }else if(outcome == "road_density_standardized"){
+    f <- paste0("%s ~ exposure + ", paste0(controls_road, collapse = "+"),
+            "| time_fe + parish_id + region | 0 | parish_id")
+  }else{
+    f <- paste0("%s ~ exposure + ", paste0(controls_school, collapse = "+"),
+            "| time_fe + parish_id + region | 0 | parish_id")
+  }
+
+  ## Select distance
+  nearest_camp_distance <- model_specs$distance_to_camp[i]
+  if(is.na(nearest_camp_distance)){
+    nearest_camp_distance <- "full"
+  }
+    
+  ## Run model
+  if(nearest_camp_distance != "full"){
+    df_mod <- df_plot_par %>% 
+      dplyr::filter(min_distance_01 < nearest_camp_distance)
+  }else{
+    df_mod <- df_plot_par
+  }
+  model_out <- felm(
+    as.formula(sprintf(f, outcome)), 
+    data = df_mod,
+    cmethod = "reghdfe"
+  )
+    
+  return(model_out)
+
+}
+
+model_specs <- model_specs %>%
+  mutate(outcome = case_when(
+    outcome == "road_density_standardized"~"Roads",
+    outcome == "public_primary_schools_per_thousand_kids_parish_level_standardized"~"Public Pri",
+    outcome == "public_per_thousand_kid_standardized"~"Public Sec",
+    outcome == "PGindex_mean"~"PG Index",
+    outcome == "minmax_count_pop_hcii_standardized"~"HC2", 
+    outcome == "multiply4_minmax_hciii_standardized"~"HC3", 
+    outcome == "multiply4_minmax_hciv_standardized"~"HC4", 
+    outcome == "multiply4_minmax_hcv_standardized"~"HC5"
+  ))
+
+print(texreg(
+  run_all_models,
+  custom.coef.map = list("exposurebin1" = "Exposure"),
+  custom.model.names = model_specs$outcome,
+  custom.gof.rows = list(
+    "Controls x Year" = rep("Yes", length(run_all_models)),
+    "Sample Distance (km)" = model_specs$distance_to_camp
+  ),
+  digits = 3,
+  include.adjrs = FALSE,
+  doctype = FALSE,
+  stars = c(.01, .05, .1),
+ caption = "Regression table for Public Goods outcomes: For parishes within 150km, OLS models using Nearest + 20km binary refugee presence in a two-period model (pre-2014 vs. post-2014), including controls, parish FE and region FE, with standard errors clustered at the parish level.",
+  label = "tab:twoperiodbinary",
+  use.packages = FALSE,
+  scalebox='0.7',
+  float.pos = "H"))
+
+@
+
+
+\newpage
+\section{Sensitivity Analysis}
+\label{SIsec:sensitivity}
+
+In this section, we implement sensitivity analysis from \citet{cinelli2020making} to understand the impact of omitted variables.
+
+<<run-sensitivity-parish, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+## --------------------------------
+## Define function to run sensemakr
+## --------------------------------
+sensemakr_felm <- function(mod, varname, benchmark_var){
+  # Extract info
+  est <- tidy(mod) %>% filter(term == varname) %>% pull(estimate)
+  se <- tidy(mod) %>% filter(term == varname) %>% pull(std.error)
+  df <- mod$df
+  # Run sensitivity analysis
+  run_sm <- sensemakr(estimate = est, se = se, dof = df,
+                      treatment = varname)
+  sens_stats <- run_sm$sensitivity_stats
+  # Run informal benchmarking
+  t.dydj <- tidy(mod) %>% filter(term == benchmark_var) %>% pull(statistic)
+  t.dxdj <- tidy(mod$dx.sens) %>% filter(term == benchmark_var) %>% pull(statistic)
+  df.dx <- mod$dx.sens$df
+  r2yxj.dx <- partial_r2(t_statistic = t.dydj, dof = df)
+  r2dxj.x <- partial_r2(t_statistic = t.dxdj, dof = df.dx)
+  bounds <- ovb_partial_r2_bound(r2dxj.x = r2dxj.x, r2yxj.dx = r2yxj.dx,
+                                 kd = c(1,5,10),
+                                 ky = c(1,5,10))
+
+  bound_values <- adjusted_estimate(estimate = est,
+                                    se = se,
+                                    dof = df,
+                                    r2dz.x = bounds$r2dz.x,
+                                    r2yz.dx = bounds$r2yz.dx)
+  
+  sens_stats <- sens_stats %>%
+    mutate(adj_est_1x = bound_values[1],
+           adj_est_5x = bound_values[2],
+           adj_est_10x = bound_values[3])
+  
+  return(sens_stats)
+}
+
+parish_sensitivity <- map_dfr(
+  run_all_models_main, 
+  ~sensemakr_felm(.x, .x$sensemakr_param, .x$benchmark_param)
+)
+
+
+# Build dataframe
+sensitivity_parish_df <- model_specs_main %>%
+  bind_cols(parish_sensitivity) %>%
+  filter(
+    outcome %in% c("public_primary_schools_per_thousand_kids_parish_level",
+                   "public_per_thousand_kid",
+                   "road_density_standardized", 
+                   "PGindex_mean",
+                   "minmax_count_pop_hcii_standardized", 
+                    "multiply4_minmax_hciii_standardized", 
+                    "multiply4_minmax_hciv_standardized", 
+                    "multiply4_minmax_hcv_standardized")
+  ) %>%
+  mutate(
+    outcome = case_when(
+      outcome == "public_primary_schools_per_thousand_kids_parish_level"~"Public Primary",
+      outcome == "public_per_thousand_kid"~"Public Secondary",
+      outcome == "road_density_standardized"~"Road Density",
+      outcome == "PGindex_mean"~"PG Index",
+      outcome == "minmax_count_pop_hcii_standardized"~"HC2", 
+      outcome == "multiply4_minmax_hciii_standardized"~"HC3", 
+      outcome == "multiply4_minmax_hciv_standardized"~"HC4", 
+      outcome == "multiply4_minmax_hcv_standardized"~"HC5"
+      )
+  ) 
+@
+
+<<sensitivity-table, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+print(xtable(sensitivity_parish_df %>%
+  filter(indep_var == "Nearest + 20km" & distance_to_camp == 150) %>%
+  dplyr::select(-c(treatment, dof, distance_to_camp, 
+                   indep_var, sample, f2yd.x)) %>%
+  mutate(across(c(r2yd.x, rv_q, rv_qa), ~scales::percent(.x, accuracy = .1)),
+         across(where(is.double), ~round(.x, 4))) 
+),
+include.rownames=FALSE, 
+scalebox='0.8',
+float.pos = "H")
+
+@
+
+\noindent This table shows the sensitivity diagnostics for the DiD estimates for refugee presence interacted with 2020. 
+To interpret these sensitivity analyses:
+
+\begin{itemize}
+\item Partial R2 of the treatment with the outcome (\verb|r2yd.x|): an extreme confounder (orthogonal to the covariates) that explains 100\% of the residual variance of the outcome, would need to explain at least X\% of the residual variance of the treatment to fully account for the observed estimated effect.
+\item Robustness Value, q = 1 (\verb|rv_q|): unobserved confounders (orthogonal to the covariates) that explain more than X\% of the residual variance of both the treatment and the outcome are strong enough to bring the point estimate to 0 (a bias of 100\% of the original estimate). Conversely, unobserved confounders that do not explain more than X\% of the residual variance of both the treatment and the outcome are not strong enough to bring the point estimate to 0.
+\item Robustness Value, q = 1, alpha = 0.05 (\verb|rv_qa|): unobserved confounders (orthogonal to the covariates) that explain more than X\% of the residual variance of both the treatment and the outcome are strong enough to bring the estimate to a range where it is no longer `statistically different' from 0 (a bias of 100\% of the original estimate), at the significance level of alpha = 0.05. Conversely, unobserved confounders that do not explain more than X\% of the residual variance of both the treatment and the outcome are not strong enough to bring the estimate to a range where it is no longer 'statistically different' from 0, at the significance level of alpha = 0.05.
+\item \verb|adj_est_1x| / \verb|adj_est_5x| / \verb|adj_est_10x|: what the adjusted estimate in the presence of an unobserved confounder that is as large as / 5 times as large as / 10 times as large as the interaction between parish unemployment rate measured in the 2002 census interacted with 2016. 
+\end{itemize}
+
+Our results are robust to concerns of omitted variables bias. 
+
+
+\newpage
+\section{Multiple Hypothesis Testing Corrections}
+\label{SIsec:multhypothesis}
+
+We address concerns about multiple hypothesis testing by adjusting for the false discovery rate (FDR). We show the Benjamini-Hochberg (BH) adjusted p-values for the results in our paper. We show the adjusted p-values within sets of outcomes for the 2020 estimates. Our statistically significant findings for the main public goods outcomes hold.
+
+\subsection{Public Goods Outcomes}
+<<bh_dev, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+inds_dev <- which(
+  model_specs_main$indep_var == "Nearest + 20km"
+  & model_specs_main$distance_to_camp == 150 
+  & model_specs_main$outcome %in% c(
+                    "public_primary_schools_per_thousand_kids_parish_level",
+                    "public_per_thousand_kid",
+                    "road_density_standardized", 
+                    "PGindex_mean",
+                    "minmax_count_pop_hcii_standardized", 
+                    "multiply4_minmax_hciii_standardized", 
+                    "multiply4_minmax_hciv_standardized", 
+                    "multiply4_minmax_hcv_standardized"))
+
+## Get data
+dev_ests <- map_df(inds_dev, function(x){
+  mod <- tidy(run_all_models_main[[x]])
+  model_specs_main[x,] %>% 
+    bind_cols(
+      mod %>% filter(term == c('I((year == "2020") * exposure)')) %>%
+        dplyr::select(estimate, std.error, p.value)
+    )
+})
+
+dev_ests <- dev_ests %>%
+  mutate(p_val_adj = p.adjust(p.value, method = "BH"))
+
+## Create table
+print(xtable(
+  dev_ests %>% 
+    dplyr::select(outcome, estimate, std.error, 
+                  p.value, p_val_adj) %>%
+    mutate(outcome = case_when(
+      outcome == "public_primary_schools_per_thousand_kids_parish_level"~"Public Primary",
+      outcome == "public_per_thousand_kid"~"Public Secondary",
+      outcome == "road_density_standardized"~"Road Density",
+      outcome == "PGindex_mean"~"PG Index",
+      outcome == "minmax_count_pop_hcii_standardized"~"HC2", 
+      outcome == "multiply4_minmax_hciii_standardized"~"HC3", 
+      outcome == "multiply4_minmax_hciv_standardized"~"HC4", 
+      outcome == "multiply4_minmax_hcv_standardized"~"HC5"
+    )) %>%
+    rename(Outcome = outcome, Estimate = estimate, SE = std.error,
+           `p-value` = p.value, `adj. p-value` = p_val_adj),
+  digits = 3
+),
+include.rownames=FALSE, 
+scalebox='0.9',
+float.pos = "H")
+
+@
+
+\subsection{Migration Attitudes (Afrobarometer)}
+<<bh_migatt, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+inds_mig <- which(
+  model_specs_ab$indep_var == "Nearest + 20km"
+  & model_specs_ab$distance_to_camp == 150 
+  & model_specs_ab$outcome %in% c("migrants_attitude_standardized",
+                               "migrants_movement_standardized",
+                               "born_non_ugandans_standardized",
+                               "foreigner_residents_standardized"))
+
+## Get data
+mig_ests <- map_df(inds_mig, function(x){
+  mod <- tidy(run_all_models_ab[[x]])
+  model_specs_ab[x,] %>% 
+    bind_cols(
+      mod %>% filter(term %in% c('I((year == "2020") * exposure)',
+                                 'exposure')) %>%
+        dplyr::select(estimate, std.error, p.value)
+    )
+})
+
+mig_ests <- mig_ests %>%
+  mutate(p_val_adj = p.adjust(p.value, method = "BH"))
+
+## Create table
+print(xtable(
+  mig_ests %>% 
+    dplyr::select(outcome, estimate, std.error, 
+                  p.value, p_val_adj) %>%
+    mutate(outcome = case_when(
+      outcome == "migrants_attitude_standardized"~"Migrant Neighbors",
+      outcome == "migrants_movement_standardized"~"Move Freely",
+      outcome == "born_non_ugandans_standardized"~"Born non-Ugandan",
+      outcome == "foreigner_residents_standardized"~"Naturalize"
+    )) %>%
+    rename(Outcome = outcome, Estimate = estimate, SE = std.error,
+           `p-value` = p.value, `adj. p-value` = p_val_adj),
+  digits = 3
+),
+include.rownames=FALSE, 
+scalebox='0.9',
+float.pos = "H")
+@
+
+\subsection{Perceptions of Insecurity (Afrobarometer)}
+<<bh_insecure, eval = TRUE, echo = FALSE, tidy=TRUE, results = "asis", warning=FALSE, message=FALSE>>=
+
+inds_insecure <- which(
+  model_specs_ab$indep_var == "Nearest + 20km"
+  & model_specs_ab$distance_to_camp == 150 
+  & model_specs_ab$outcome %in% c(
+                               "feel_unsafe_standardized",
+                               "feared_crime_standardized"))
+
+## Get data
+insecure_ests <- map_df(inds_insecure, function(x){
+  mod <- tidy(run_all_models_ab[[x]])
+  model_specs_ab[x,] %>% 
+    bind_cols(
+      mod %>% filter(term %in% c('I((year == "2020") * exposure)')) %>%
+        dplyr::select(estimate, std.error, p.value)
+    )
+})
+
+insecure_ests <- insecure_ests %>%
+  mutate(p_val_adj = p.adjust(p.value, method = "BH"))
+
+## Create table
+print(xtable(
+  insecure_ests %>% 
+    dplyr::select(outcome, estimate, std.error, 
+                  p.value, p_val_adj) %>%
+    mutate(outcome = case_when(
+      outcome == "feel_unsafe_standardized"~"Feel Unsafe",
+      outcome == "feared_crime_standardized"~"Fear Crime"
+    )) %>%
+    rename(Outcome = outcome, Estimate = estimate, SE = std.error,
+           `p-value` = p.value, `adj. p-value` = p_val_adj),
+  digits = 3
+),
+include.rownames=FALSE, 
+scalebox='0.9',
+float.pos = "H")
+
+@
+
+
+\clearpage
+\newpage
+\section{Addressing Compositional Concerns of Domestic Migration}
+\label{SIsec:compositional}
+
+In order to rule out the possibility that our findings on public opinion are not driven potentially by population re-composition, we provide additional evidence by analyzing Ugandans' mobility on district level. We used geocoded individual level Uganda DHS (2016) data that specifically asked questions about respondent's previous and current district of residence, based on which we generated a dummy variable that takes 1 if the respondent moved in current residential district from a different one and 0 otherwise. 
+
+Firstly, we aggregated individual mobility indicator to district level and calculated an inflow and outflow ratio for each district. Outflow ratio is defined as the number of people that moved out of their previous district divided by the original total population of that district. Inflow ratio is defined in a similar way. Figure \ref{figure:bar_mobility} displays the outflow and inflow ratios for districts in the North and West region where refugee camps are located. Compared to those that do not host refugees, refugee-hosting districts have relatively low out-migration mobility while have in-migration mobility close and some higher than the median.
+
+\begin{figure}[h!]
+	\centering
+	\caption{Outflow \& Inflow ratio for districts in the North and West region.}\label{figure:bar_mobility}	
+	\includegraphics[width=.8\linewidth]{figures_Ge/domestic_mobility.pdf}
+\end{figure}
+
+\begin{figure}[h!]
+	\centering
+	%\caption{Inflow ratio for districts in the North and West region.}\label{figure:bar_mobility_inflow}	
+	\includegraphics[width=.8\linewidth]{figures_Ge/domestic_mobility_inflow.pdf}
+\end{figure}
+
+While we cannot assess comprehensive reasons why people migrated into these refugee hosting districts due to lack of supportive questions in DHS questionnaires, we applied simple linear regression model with controls and region fixed effects on individual level to examine whether refugee presence contributed to in-migration mobility. One very important note is that there is high probability that Uganda DHS 2016 sample refugees together with Ugandans and didn't provide information that could help distinguish the two (compare the sampling method description for 2016 DHS versus 2018 DHS where they specifically emphasized and distinguished refugee respondents \citep{dhs2018ug,dhs2020ugmis}). In addition, an unusually large wave of internal displacement due to conflict and violence was reported happening in 2016 \citep{idp}, as well as refugee displacement \citep{unhcr}. Taking these factors into account, we use a radius cutoff based on distance to refugee camps In order to restrain the sample to Ugandans only. More specifically, we have four different sets of cohorts for our regression analysis: 10 - 100km, 10 - 150km, 10 - 200km, all that are farther than 10km. In the following regression table, we show that there is no relationship between in-migration mobility and our refugee presence measure, whether in continuous or dichotomous scale.
+
+\begin{table}[h!]
+	\centering
+	\begin{center}
+	\resizebox{\textwidth}{!}{
+		\begin{tabular}{l c c c c c c c c}
+			\hline
+			& \multicolumn{4}{c}{continuous presence measure} & \multicolumn{4}{c}{dichotomous presence measure} \\
+			\cline{2-5} \cline{6-9}
+			& (1) & (2) & (3) & (4) & (5) & (6) & (7) & (8) \\
+			\hline
+			Nearest + 20km       & $0.010$            & $0.009$            & $0.012$            & $0.007$            & $0.003$            & $0.028$            & $-0.010$           & $-0.004$           \\
+			& $ (0.0148)$ & $(0.0123)$ & $ (0.0139)$ & $ (0.0142)$ & $ (0.0316) $ & $ (0.0249)$ & $ (0.0330) $ & $ (0.0323)$ \\
+			\hline
+			Sample Distance (km) & 100                & 150                & 200                & All                & 100                & 150                & 200                & All                \\
+			Num. obs.            & $9442$             & $12178$            & $17229$            & $22083$            & $9442$             & $12178$            & $17229$            & $22083$            \\
+			N Clusters           & $31$               & $39$               & $47$               & $55$               & $31$               & $39$               & $47$               & $55$               \\
+			Controls             & Yes                & Yes                & Yes                & Yes                & Yes                & Yes                & Yes                & Yes                \\
+			Region FE            & Yes                & Yes                & Yes                & Yes                & Yes                & Yes                & Yes                & Yes                \\
+			R$^2$                & $0.030$            & $0.056$            & $0.081$            & $0.089$            & $0.029$            & $0.056$            & $0.081$            & $0.089$            \\
+			\hline
+		\end{tabular}}
+	\end{center}
+\end{table}
+
+
+Again, our analysis was carried out using 2002 administrative districts for the purpose of consistency. But note the we repeated the same analysis using 2016 districts. The results remain the same.
+
+
+\clearpage
+\newpage
+\setstretch{1}
+\bibliography{RefugeeProximity,RefugeeAppendix}
+
+
+\end{document}
+

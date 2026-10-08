@@ -1,0 +1,35 @@
+{
+  "raw_rows": 26890,
+  "raw_parishes": 5378,
+  "waves": [
+    2001,
+    2006,
+    2011,
+    2016,
+    2020
+  ],
+  "duplicate_keys": 0,
+  "rows_with_missing_controls_or_distance": 1055,
+  "complete_rows": 25835,
+  "radius150_rows": 18185,
+  "radius150_parishes": 3637,
+  "binary_missing_after_authors_cut": 7,
+  "binary_breaks": [
+    -2.419652426678967,
+    -0.039845678726340115,
+    4.432568503264447
+  ],
+  "extension_baseline_median": 2.17438787145981,
+  "s16_coefficients_matching": 8,
+  "s16_samples_matching": 8,
+  "s16_standard_errors_matching": 8
+}
+                 outcome  estimate       se     n  coefficient_matches_rounding  n_matches  se_matches_rounding
+  Public primary schools  0.057973 0.024696 18178                          True       True                 True
+Public secondary schools -0.011653 0.028555 18178                          True       True                 True
+            Road density  0.179052 0.032295 10904                          True       True                 True
+             HC2 clinics -0.160318 0.033612 14548                          True       True                 True
+             HC3 centers  0.109709 0.027379 14548                          True       True                 True
+             HC4 centers -0.060799 0.024913 14548                          True       True                 True
+           HC5 hospitals  0.068004 0.027535 14548                          True       True                 True
+      Public goods index  0.030697 0.004726 18178                          True       True                 True
