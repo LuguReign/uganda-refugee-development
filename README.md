@@ -60,4 +60,4 @@ Zhou, Yang-Yang, Guy Grossman, and Shuning Ge. 2023. “Inclusive refugee-hostin
 
 Replication archive, Harvard Dataverse V1: https://doi.org/10.7910/DVN/TXSZDC. The archive displays CC0 1.0 terms. Data and archived author code retain their provenance and attribution; this project's code license does not replace third-party terms.
 
-OpenAI Codex assisted with source inspection, programming, drafting, and checking. Estimates come from executed code. Claude Code use and independent human peer review are not claimed. Review the material before using it in an application or describing personal contributions.
+OpenAI Codex assisted with source inspection, programming, drafting, and checking. Estimates come from executed code.
